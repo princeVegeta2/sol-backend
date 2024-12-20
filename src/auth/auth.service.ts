@@ -1,31 +1,56 @@
-import { Injectable } from "@nestjs/common";
-import { UserService } from "src/user/user.service";
-import { JwtService } from "@nestjs/jwt";
+import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { UserService } from 'src/user/user.service';
+import { JwtService } from '@nestjs/jwt';
+import { User } from 'src/user/user.entity'; // Ensure you import your User entity
 
 @Injectable()
 export class AuthService {
-    constructor(
-        private userService: UserService,
-        private jwtService: JwtService
-    ) {}
+  constructor(
+    private userService: UserService,
+    private jwtService: JwtService,
+  ) {}
 
-    async validateUser (email: string, password: string): Promise<any> {
-        const user = await this.userService.validateUser(email, password);
-        if (user) {
-            const { passwordHash, ...result } = user;
-            return result;
-        }
-        return null;
+  /**
+   * Validate user credentials
+   * @param email - User's email
+   * @param password - User's password
+   * @returns A user object without sensitive information, or throws an exception
+   */
+  async validateUser(email: string, password: string): Promise<Omit<User, 'password_hash'> | null> {
+    const user = await this.userService.validateUser(email, password);
+    if (user) {
+      const { password_hash, ...result } = user;
+      return result;
     }
+    return null;
+  }
 
-    async login(user: any) {
-        const payload = { email: user.email, sub: user.id };
-        return {
-            access_token: this.jwtService.sign(payload),
-        };
-    }
+  /**
+   * Generate a JWT token for the user
+   * @param user - User object
+   * @returns An object containing the JWT token
+   */
+  async login(user: { id: number; email: string }) {
+    const payload = { email: user.email, sub: user.id }; // 'sub' is short for 'subject' (user ID)
+    return {
+      access_token: this.jwtService.sign(payload),
+    };
+  }
 
-    async createUser(username: string, email: string, password: string) {
-        return this.userService.createUser(username, email, password);
-    }
+  /**
+   * Create a new user
+   * @param username - User's username
+   * @param email - User's email
+   * @param password - User's password
+   * @returns The created user object
+   */
+  async createUser(username: string, email: string, password: string) {
+    const newUser = await this.userService.createUser(username, email, password);
+    return {
+      id: newUser.id,
+      username: newUser.username,
+      email: newUser.email,
+      created_at: newUser.created_at,
+    }; // Return only non-sensitive fields
+  }
 }
