@@ -3,28 +3,36 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import * as dotenv from 'dotenv';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { join } from 'path';
 
-dotenv.config();
+
 
 @Module({
   imports: [
+    ConfigModule.forRoot(),
     AuthModule,
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      host: process.env.DB_HOST,
-      port: parseInt(process.env.DB_PORT, 10) || 5432,
-      username: process.env.DB_USERNAME,
-      password: process.env.DB_PASSWORD,
-      database: process.env.DB_NAME,
-      entities: [__dirname + '/**/*.entity.js'],
-      synchronize: true, 
-      ssl: {
-        rejectUnauthorized: false,
-      }
-    }),
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        
+        type: 'postgres',
+        host: configService.get('DB_HOST'),
+        port: configService.get('DB_PORT'),
+        username: configService.get('DB_USERNAME'),
+        password: configService.get('DB_PASSWORD'),
+        database: configService.get('DB_NAME'),
+        entities: [join(process.cwd(), 'dist/**/*.entity.js')],
+        synchronize: false,
+        ssl: {
+          rejectUnauthorized: false,
+        },
+      }),
+    })
   ],
   controllers: [AppController],
   providers: [AppService],
 })
+
 export class AppModule {}
