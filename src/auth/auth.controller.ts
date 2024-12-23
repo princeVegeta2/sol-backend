@@ -3,6 +3,7 @@ import { AuthService } from './auth.service';
 import { LocalAuthGuard } from './local-auth.guard';
 import { CreateUserDto } from 'src/user/create-user.dto';
 import { LoginUserDto } from 'src/user/login-user.dto';
+import { UnauthorizedException } from '@nestjs/common';
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {
@@ -16,7 +17,14 @@ export class AuthController {
 
   @UseGuards(LocalAuthGuard)
   @Post('login')
-  async login(@Body() loginUserDto: LoginUserDto, @Request() req) {
-    return this.authService.login(req.user);
+  async login(@Body() loginUserDto: LoginUserDto) {
+    const { email, password, staySignedIn } = loginUserDto;
+
+    const user = await this.authService.validateUser(email, password);
+    if (!user) {
+      throw new UnauthorizedException("Invalid credentials"); 
+    }
+
+    return this.authService.login({ id: user.id, email: user.email }, staySignedIn);
   }
 }
