@@ -11,4 +11,10 @@ export class CryptoController {
     // Call the service to fetch token data
     return this.solanaService.getTokenData(mintAddress);
   }
+
+  @Get('token-price')
+  async getTokenPrice(@Query('mintAddress') mintAddress: string) {
+    // Call the service to fetch token price
+    return this.solanaService.getTokenPrice(mintAddress);
+  }
 }

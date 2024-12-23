@@ -23,14 +23,26 @@ export class SolanaService {
         }
     }
 
-    private decodeTokenAccount(data: Buffer): any {
-        // Decode the account data (e.g., decimals, supply, etc.)
-        const layout = require('@solana/spl-token').MintLayout;
-        const decoded = layout.decode(data);
-        return {
-            decimals: decoded.decimals,
-            supply: decoded.supply.toString(),
-        };
+    async getTokenPrice(mintAddress: string): Promise<any> {
+        try {
+            const jupApiUrl = `https://api.jup.ag/price/v2?ids=${mintAddress.trim()},So11111111111111111111111111111111111111112`;
+            const response = await axios.get(jupApiUrl);
+
+            if (!response.data) {
+                throw new Error('No price data found for the provided mint address');
+            }
+
+            const price = parseFloat(response.data.data[mintAddress.trim()].price);
+
+            if (isNaN(price)) {
+                throw new Error('Invalid price data found for the provided mint address');
+            }
+
+            return price;
+        } catch (error) {
+            console.error('Error fetching price:', error.message);
+            throw new Error(`Failed to fetch token price: ${error.message}`);
+        }
     }
 
     private async getTokenMetadata(mintAddress: string): Promise<any> {
