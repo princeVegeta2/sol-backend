@@ -31,10 +31,12 @@ export class AuthService {
    * @returns An object containing the JWT token
    */
   async login(user: { id: number; email: string; }, staySignedIn: boolean) {
-    const payload = { email: user.email, sub: user.id }; // 'sub' is short for 'subject' (user ID)
-    const expiresIn = staySignedIn ? '30d' : '24h';
+    const payload = { sub: user.id, email: user.email }; // 'sub' is short for 'subject' (user ID)
+    const options = {
+      expiresIn: staySignedIn ? '30d' : '24h',
+    };
     return {
-      access_token: this.jwtService.sign(payload, { expiresIn }),
+      access_token: this.jwtService.sign(payload, options),
     };
   }
 

@@ -28,6 +28,11 @@ export class UserService {
         return this.userRepository.findOne({ where: {email} });
     }
 
+    // Finds user by id
+    async findUserById(id: number): Promise<User | undefined> {
+        return this.userRepository.findOne({ where: { id } });
+    }
+
     // Validates the user by looking email and comparing hash
     async validateUser(email: string, password: string): Promise<User | null> {
         const user = await this.findUserByEmail(email);
