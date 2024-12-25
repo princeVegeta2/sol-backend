@@ -25,7 +25,7 @@ export class CryptoController {
   @UseGuards(JwtAuthGuard)
   @Post('create-entry')
   async createEntry(@Request() req, @Body() createEntryDto: CreateEntryDto) {
-    const userId = req.user.Id;
+    const userId = req.user.userId;
     return this.cryptoService.createEntry(userId, createEntryDto);
   }
 }
