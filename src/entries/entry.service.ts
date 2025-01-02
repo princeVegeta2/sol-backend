@@ -9,17 +9,19 @@ export class EntryService {
     constructor(
         @InjectRepository(Entry)
         private entryRepository: Repository<Entry>,
-    ){}
+    ) {}
 
-    async createEntry(user: User, mintAddress: string, amount: number, price?: number, marketcap?: number, liquidity?: number): Promise<Entry> {
-        const newEntry = this.entryRepository.create({
-            user,
-            mintAddress,
-            amount,
-            price,
-            marketcap,
-            liquidity
-        });
+    async createEntry(entryData: {
+        user: User;
+        mintAddress: string;
+        amount: number;
+        source: string;
+        price?: number;
+        marketcap?: number;
+        liquidity?: number;
+    }): Promise<Entry> {
+        const newEntry = this.entryRepository.create(entryData);
         return this.entryRepository.save(newEntry);
     }
+
 }

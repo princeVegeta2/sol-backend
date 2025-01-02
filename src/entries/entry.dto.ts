@@ -8,4 +8,8 @@ export class CreateEntryDto {
   @IsNumber()
   @IsPositive()
   amount: number;
+
+  @IsString()
+  @IsNotEmpty()
+  source: string;
 }

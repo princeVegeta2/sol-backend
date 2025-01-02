@@ -1,1 +1,1 @@
-Fix jwt token being the same and retrieving user id 1
+Remove user returned by createEntry 
