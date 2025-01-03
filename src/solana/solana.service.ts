@@ -23,6 +23,34 @@ export class SolanaService {
         }
     }
 
+    async getBulkTokenData(mintAddresses: string[]): Promise<any[]> {
+        try {
+            const MAX_MINT_ADDRESSES = 30; // Maximum addresses allowed per API request
+            const results = [];
+
+            // Split mintAddresses into batches of up to 30
+            for (let i = 0; i < mintAddresses.length; i += MAX_MINT_ADDRESSES) {
+                const batch = mintAddresses.slice(i, i + MAX_MINT_ADDRESSES);
+                const mintAddressQuery = batch.join(',');
+
+                // Construct the API URL for this batch
+                const apiUrl = `https://api.dexscreener.com/latest/dex/tokens/${mintAddressQuery}`;
+
+                // Make the API call
+                const response = await axios.get(apiUrl);
+
+                // Add the response data to the results array
+                results.push(response.data);
+            }
+
+            // Return all results combined
+            return results;
+        } catch (error) {
+            console.error('Error fetching bulk token data:', error.message);
+            throw new Error(`Failed to fetch bulk token data: ${error.message}`);
+        }
+    }
+
     async getTokenPrice(mintAddress: string): Promise<any> {
         try {
             const jupApiUrl = `https://api.jup.ag/price/v2?ids=${mintAddress.trim()},So11111111111111111111111111111111111111112`;

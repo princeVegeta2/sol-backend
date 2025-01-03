@@ -1,1 +1,1 @@
-Remove user returned by createEntry 
+1) Create bulk update for token data via dex multitoken request

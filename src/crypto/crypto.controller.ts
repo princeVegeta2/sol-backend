@@ -22,6 +22,12 @@ export class CryptoController {
     return this.solanaService.getTokenPrice(mintAddress);
   }
 
+  @Get('bulk-token-data')
+  async getBulkTokenData(@Body() mintAddresses: string[]) {
+    // Call the service to fetch bulk token data
+    return this.solanaService.getBulkTokenData(mintAddresses);
+  }
+
   @UseGuards(JwtAuthGuard)
   @Post('create-entry')
   async createEntry(@Request() req, @Body() createEntryDto: CreateEntryDto) {

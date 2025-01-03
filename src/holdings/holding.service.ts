@@ -18,6 +18,8 @@ export class HoldingService {
         mintAddress: string;
         amount: number;
         price: number;
+        marketcap: number;
+        liquidity: number;
         value_usd: number;
     }): Promise<Holding> {
         const newHolding = this.holdingRepository.create(holdingData);
