@@ -61,13 +61,17 @@ export class CryptoService {
         });
 
         // Create metadata entry
-        const tokenMetadata = await this.tokenMetadataService.createTokenMetadata({
-            mint_address: createEntryDto.mintAddress,
-            image: tokenData.image,
-            website: tokenData.website,
-            x_page: tokenData.xPage,
-            telegram: tokenData.telegram
-        })
+        const existingMetadata = await this.tokenMetadataService.findTokenDataByMintAddress(createEntryDto.mintAddress);
+        
+        if (!existingMetadata) {
+            await this.tokenMetadataService.createTokenMetadata({
+                mint_address: createEntryDto.mintAddress,
+                image,
+                website,
+                x_page,
+                telegram,
+            });
+        }
 
         // Return only non-sensitive fields in the response
         return {

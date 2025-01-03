@@ -21,4 +21,8 @@ export class TokenMetadataService {
         const newTokenMetadata = this.tokenMetadataRepository.create(tokenMetadata);
         return this.tokenMetadataRepository.save(newTokenMetadata);
     }
+
+    async findTokenDataByMintAddress(mintAddress: string): Promise<TokenMetadata> {
+        return this.tokenMetadataRepository.findOne({where: { mint_address: mintAddress }});
+    }
 }
