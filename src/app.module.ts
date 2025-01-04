@@ -5,6 +5,8 @@ import { AuthModule } from './auth/auth.module';
 import { CryptoModule } from './crypto/crypto.module';
 import { HoldingModule } from './holdings/holding.module';
 import { UserModule } from './user/user.module';
+import { TokenMetadataModule } from './metadata/token_metadata.module';
+import { ExitModule } from './exits/exit.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { join } from 'path';
@@ -18,6 +20,8 @@ import { join } from 'path';
     CryptoModule,
     HoldingModule,
     UserModule,
+    TokenMetadataModule,
+    ExitModule,
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

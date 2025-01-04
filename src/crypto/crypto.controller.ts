@@ -1,6 +1,7 @@
 import { Controller, Get, Query, BadRequestException, Body, Post, UseGuards, Request } from '@nestjs/common';
 import { SolanaService } from '../solana/solana.service';
 import { CreateEntryDto } from '../entries/entry.dto';
+import { CreateExitDto } from 'src/exits/exit.dto';
 import { CryptoService } from './crypto.service';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 
@@ -33,5 +34,12 @@ export class CryptoController {
   async createEntry(@Request() req, @Body() createEntryDto: CreateEntryDto) {
     const userId = req.user.userId;
     return this.cryptoService.createEntry(userId, createEntryDto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('create-exit')
+  async createExit(@Request() req, @Body() createExitDto: CreateExitDto) {
+    const userId = req.user.userId;
+    return this.cryptoService.createExit(userId, createExitDto);
   }
 }

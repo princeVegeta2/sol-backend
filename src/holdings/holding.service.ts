@@ -26,18 +26,26 @@ export class HoldingService {
         return this.holdingRepository.save(newHolding);
     }
 
-    async findHoldingByUserIdAndMintAddress(userId: number, mintAddress: string): Promise<Holding> {
-        const user = await this.userService.findUserById(userId);
+    async findHoldingByUserIdAndMintAddress(userId: number, mintAddress: string): Promise<Holding | null> {
+        const query = `
+            SELECT * 
+            FROM holdings 
+            WHERE user_id = $1 AND mint_address = $2
+        `;
+        const result = await this.holdingRepository.query(query, [userId, mintAddress]);
+        return result[0] || null;
+    }
+    
 
-        if (!user) {
-            throw new Error("User not found");
-        }
+    async updateHoldingEntry(holding: Holding, amount: number): Promise<Holding> {
+        holding.amount = holding.amount + amount;
+        holding.value_usd = holding.price * holding.amount;
+        return this.holdingRepository.save(holding);
+    }
 
-        return this.holdingRepository.findOne({
-            where: {
-                user: user,
-                mintAddress,
-            },
-        });
+    async updateHoldingExit(holding: Holding, amount: number): Promise<Holding> {
+        holding.amount = holding.amount - amount;
+        holding.value_usd = holding.price * holding.amount;
+        return this.holdingRepository.save(holding);
     }
 }

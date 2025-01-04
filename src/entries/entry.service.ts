@@ -19,6 +19,7 @@ export class EntryService {
         price?: number;
         marketcap?: number;
         liquidity?: number;
+        value_usd?: number;
     }): Promise<Entry> {
         const newEntry = this.entryRepository.create(entryData);
         return this.entryRepository.save(newEntry);

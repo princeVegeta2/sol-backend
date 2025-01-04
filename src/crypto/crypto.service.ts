@@ -5,6 +5,8 @@ import { UserService } from 'src/user/user.service';
 import { CreateEntryDto } from 'src/entries/entry.dto';
 import { HoldingService } from 'src/holdings/holding.service';
 import { TokenMetadataService } from 'src/metadata/token_metadata.service';
+import { ExitService } from 'src/exits/exit.service';
+import { CreateExitDto } from 'src/exits/exit.dto';
 
 @Injectable()
 export class CryptoService {
@@ -13,7 +15,47 @@ export class CryptoService {
         private readonly entryService: EntryService,
         private readonly userService: UserService,
         private readonly holdingService: HoldingService,
-        private readonly tokenMetadataService: TokenMetadataService) { }
+        private readonly tokenMetadataService: TokenMetadataService,
+        private readonly exitService: ExitService,) { }
+
+
+    async createExit(userId: number, createExitDto: CreateExitDto) {
+        const user = await this.userService.findUserById(userId);
+        if (!user) {
+            throw new Error('User not found');
+        }
+
+        const tokenData = await this.solanaService.getTokenData(createExitDto.mintAddress);
+        if (!tokenData) {
+            throw new Error('Token not found');
+        }
+
+        const price = parseFloat(tokenData.priceUsd);
+        const marketcap = parseFloat(tokenData.marketCap);
+        const liquidity = parseFloat(tokenData.liquidity.usd);
+        const value_usd = price * createExitDto.amount;
+
+        // Create the exit
+        await this.exitService.createExit({
+            user,
+            mintAddress: createExitDto.mintAddress,
+            amount: createExitDto.amount,
+            price,
+            marketcap,
+            liquidity,
+            value_usd,
+        });
+        console.log('Finding holding for userId:', userId, 'and mintAddress:', createExitDto.mintAddress);
+
+        // Find the holding
+        const holding = await this.holdingService.findHoldingByUserIdAndMintAddress(userId, createExitDto.mintAddress);
+        if (!holding) {
+            throw new Error('Holding not found');
+        }
+
+        // Update the holding with the exit amount
+        await this.holdingService.updateHoldingExit(holding, createExitDto.amount);
+    }
 
     async createEntry(userId: number, createEntryDto: CreateEntryDto) {
         // Find the user by userId
@@ -37,17 +79,21 @@ export class CryptoService {
         const website = tokenData.info.websites.url;
         const x_page = tokenData.info.socials[0].url;
         const telegram = tokenData.info.socials[1].url;
-
+        const holding = await this.holdingService.findHoldingByUserIdAndMintAddress(userId, createEntryDto.mintAddress);
         // Create a holding entry
-        await this.holdingService.createHolding({
-            user,
-            mintAddress: createEntryDto.mintAddress,
-            amount: createEntryDto.amount,
-            price,
-            marketcap,
-            liquidity,
-            value_usd,
-        });
+        if (!holding) {
+            await this.holdingService.createHolding({
+                user,
+                mintAddress: createEntryDto.mintAddress,
+                amount: createEntryDto.amount,
+                price,
+                marketcap,
+                liquidity,
+                value_usd,
+            });
+        } else {
+            await this.holdingService.updateHoldingEntry(holding, createEntryDto.amount);
+        }
 
         // Create an entry in the entries table
         const entry = await this.entryService.createEntry({
@@ -58,11 +104,12 @@ export class CryptoService {
             price,
             marketcap,
             liquidity,
+            value_usd
         });
 
         // Create metadata entry
         const existingMetadata = await this.tokenMetadataService.findTokenDataByMintAddress(createEntryDto.mintAddress);
-        
+
         if (!existingMetadata) {
             await this.tokenMetadataService.createTokenMetadata({
                 mint_address: createEntryDto.mintAddress,
