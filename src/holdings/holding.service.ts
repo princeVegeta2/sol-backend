@@ -21,6 +21,7 @@ export class HoldingService {
         marketcap: number;
         liquidity: number;
         value_usd: number;
+        pnl: number;
     }): Promise<Holding> {
         const newHolding = this.holdingRepository.create(holdingData);
         return this.holdingRepository.save(newHolding);
@@ -48,4 +49,30 @@ export class HoldingService {
         holding.value_usd = holding.price * holding.amount;
         return this.holdingRepository.save(holding);
     }
+
+    async updateHoldingPnl(holding: Holding, currentPrice: number): Promise<Holding> {
+        const entryValue = holding.amount * holding.price;
+        const currentValue = holding.amount * currentPrice;
+        const pnl = currentValue - entryValue;
+        holding.pnl = pnl;
+        return this.holdingRepository.save(holding);
+    }
+
+    async updateHoldingPrice(holding: Holding, price: number): Promise<Holding> {
+        holding.price = price;
+        holding.value_usd = holding.amount * price;
+        // Pnl updated in crypto.service.ts
+        return this.holdingRepository.save(holding);
+    }
+
+    async deleteHolding(holding: Holding): Promise<void> {
+        await this.holdingRepository.remove(holding);
+    }
+
+    async findAllUserHoldingsByUserId(userId: number): Promise<Holding[]> {
+        return this.holdingRepository
+            .createQueryBuilder('holding')
+            .where('holding.user_id = :userId', { userId })
+            .getMany();
+    }    
 }

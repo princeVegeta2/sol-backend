@@ -53,8 +53,13 @@ export class CryptoService {
             throw new Error('Holding not found');
         }
 
-        // Update the holding with the exit amount
-        await this.holdingService.updateHoldingExit(holding, createExitDto.amount);
+        if (holding.amount <= createExitDto.amount) {
+            // Delete holding
+            this.holdingService.deleteHolding(holding);
+        }else {
+            // Update the holding with the exit amount
+            await this.holdingService.updateHoldingExit(holding, createExitDto.amount);
+        }
     }
 
     async createEntry(userId: number, createEntryDto: CreateEntryDto) {
@@ -90,6 +95,7 @@ export class CryptoService {
                 marketcap,
                 liquidity,
                 value_usd,
+                pnl: 0,
             });
         } else {
             await this.holdingService.updateHoldingEntry(holding, createEntryDto.amount);
@@ -133,4 +139,27 @@ export class CryptoService {
             updatedAt: entry.updatedAt,
         };
     }
+
+    // Update all holdings of user with the new price
+    async updateHoldingsPrice(userId: number) {
+        const holdings = await this.holdingService.findAllUserHoldingsByUserId(userId);
+        if (!holdings || holdings.length === 0) {
+            throw new Error('This user has no holdings');
+        }
+    
+        // Use `Promise.all` to wait for all async operations
+        await Promise.all(
+            holdings.map(async (holding) => {
+                const newPrice = await this.solanaService.getTokenPrice(holding.mintAddress);
+                // Must be called BEFORE price because it uses the old price in the calculation
+                await this.holdingService.updateHoldingPnl(holding, newPrice);
+                // Also updates the value_usd
+                await this.holdingService.updateHoldingPrice(holding, newPrice);
+            })
+        );
+    
+        // Fetch and return the updated holdings
+        const updatedHoldings = await this.holdingService.findAllUserHoldingsByUserId(userId);
+        return updatedHoldings;
+    }    
 }

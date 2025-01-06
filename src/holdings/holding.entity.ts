@@ -36,6 +36,9 @@ import {
     @Column({ type: 'numeric', precision: 30, scale: 4, default: 0 })
     value_usd: number;
 
+    @Column({ type: 'numeric', precision: 30, scale: 4, default: 0})
+    pnl: number;
+
     @CreateDateColumn({ name: 'created_at', type: 'timestamptz', default: () => 'CURRENT_TIMESTAMP' })
     createdAt: Date;
   

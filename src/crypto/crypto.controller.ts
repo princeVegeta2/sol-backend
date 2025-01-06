@@ -33,6 +33,9 @@ export class CryptoController {
   @Post('create-entry')
   async createEntry(@Request() req, @Body() createEntryDto: CreateEntryDto) {
     const userId = req.user.userId;
+    if (!userId) {
+      throw new BadRequestException('User ID not found');
+    }
     return this.cryptoService.createEntry(userId, createEntryDto);
   }
 
@@ -40,6 +43,19 @@ export class CryptoController {
   @Post('create-exit')
   async createExit(@Request() req, @Body() createExitDto: CreateExitDto) {
     const userId = req.user.userId;
+    if (!userId) {
+      throw new BadRequestException('User ID not found');
+    }
     return this.cryptoService.createExit(userId, createExitDto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('update-holdings')
+  async updateHoldings(@Request() req) {
+    const userId = req.user.userId;
+    if (!userId) {
+      throw new BadRequestException('User ID not found');
+    }
+    return this.cryptoService.updateHoldingsPrice(userId);
   }
 }
