@@ -58,4 +58,34 @@ export class CryptoController {
     }
     return this.cryptoService.updateHoldingsPrice(userId);
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('get-balance-data')
+  async getBalanceData(@Request() req) {
+    const userId = req.user.userId;
+    if (!userId) {
+      throw new BadRequestException('User ID not found');
+    }
+    return this.cryptoService.getBalanceData(userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('redeem-hundred')
+  async redeemHundred(@Request() req) {
+    const userId = req.user.userId;
+    if (!userId) {
+      throw new BadRequestException('User ID not found');
+    }
+    return this.cryptoService.redeemOneHundred(userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('redeem-thousand')
+  async redeemThousand(@Request() req) {
+    const userId = req.user.userId;
+    if (!userId) {
+      throw new BadRequestException('User ID not found');
+    }
+    return this.cryptoService.redeemOneThousand(userId);
+  }
 }

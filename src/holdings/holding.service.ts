@@ -18,8 +18,6 @@ export class HoldingService {
         mintAddress: string;
         amount: number;
         price: number;
-        marketcap: number;
-        liquidity: number;
         value_usd: number;
         pnl: number;
     }): Promise<Holding> {

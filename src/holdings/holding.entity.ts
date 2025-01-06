@@ -27,12 +27,6 @@ import {
     @Column({ type: 'numeric', precision: 15, scale: 15, nullable: false })
     price: number;
 
-    @Column({ type: 'numeric', precision: 30, scale: 2, nullable: false })
-    marketcap: number;
-
-    @Column( {type: 'numeric', precision: 30, scale: 4, nullable: false })
-    liquidity: number;
-
     @Column({ type: 'numeric', precision: 30, scale: 4, default: 0 })
     value_usd: number;
 

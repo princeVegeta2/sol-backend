@@ -7,6 +7,7 @@ import { HoldingService } from 'src/holdings/holding.service';
 import { TokenMetadataService } from 'src/metadata/token_metadata.service';
 import { ExitService } from 'src/exits/exit.service';
 import { CreateExitDto } from 'src/exits/exit.dto';
+import { UsdBalanceService } from 'src/balance/usd_balance.service';
 
 @Injectable()
 export class CryptoService {
@@ -16,7 +17,8 @@ export class CryptoService {
         private readonly userService: UserService,
         private readonly holdingService: HoldingService,
         private readonly tokenMetadataService: TokenMetadataService,
-        private readonly exitService: ExitService,) { }
+        private readonly exitService: ExitService,
+        private readonly usdBalanceService: UsdBalanceService,) { }
 
 
     async createExit(userId: number, createExitDto: CreateExitDto) {
@@ -92,8 +94,6 @@ export class CryptoService {
                 mintAddress: createEntryDto.mintAddress,
                 amount: createEntryDto.amount,
                 price,
-                marketcap,
-                liquidity,
                 value_usd,
                 pnl: 0,
             });
@@ -161,5 +161,40 @@ export class CryptoService {
         // Fetch and return the updated holdings
         const updatedHoldings = await this.holdingService.findAllUserHoldingsByUserId(userId);
         return updatedHoldings;
-    }    
+    }
+    
+    // Get balance data of the user
+    async getBalanceData(userId: number) {
+        const balance = await this.usdBalanceService.getBalanceDataByUserId(userId);
+        if (!balance) {
+            throw new Error('Balance not found');
+        }
+
+        return ({
+            balance: balance.balance,
+            total_redeemed: balance.total_redeemed,
+            hundred_redeemable: balance.hundred_redeemable,
+            thousand_redeemable: balance.thousand_redeemable,
+            last_hundred_redeemed_at: balance.last_hundred_redeemed_at,
+            last_thousand_redeemed_at: balance.last_thousand_redeemed_at,
+        });
+    }
+
+    // Redeem 100$
+    async redeemOneHundred(userId: number) {
+        const updatedBalance =  await this.usdBalanceService.redeemHundred(userId);
+        if (!updatedBalance) {
+            throw new Error('Failed to redeem 100$');
+        }
+        return updatedBalance;
+    }
+
+    // Redeem 1000$
+    async redeemOneThousand(userId: number) {
+        const updatedBalance =  await this.usdBalanceService.redeemThousand(userId);
+        if (!updatedBalance) {
+            throw new Error('Failed to redeem 1000$');
+        }
+        return updatedBalance;
+    }
 }
