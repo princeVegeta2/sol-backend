@@ -12,6 +12,8 @@ export class TokenMetadataService {
     }
 
     async createTokenMetadata(tokenMetadata: {
+        name: string,
+        ticker: string,
         mint_address: string;
         image?: string;
         website?: string;

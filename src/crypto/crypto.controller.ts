@@ -36,7 +36,23 @@ export class CryptoController {
     if (!userId) {
       throw new BadRequestException('User ID not found');
     }
+    if (createEntryDto.amount <= 0) {
+      throw new BadRequestException('Amount must be greater than zero');
+    }
     return this.cryptoService.createEntry(userId, createEntryDto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('create-entry-usd')
+  async createEntryUsd(@Request() req, @Body() createEntryDto: CreateEntryDto) {
+    const userId = req.user.userId;
+    if (!userId) {
+      throw new BadRequestException('User ID not found');
+    }
+    if (createEntryDto.amount <= 0) {
+      throw new BadRequestException('Amount must be greater than zero');
+    }
+    return this.cryptoService.createEntryUsd(userId, createEntryDto);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -46,7 +62,23 @@ export class CryptoController {
     if (!userId) {
       throw new BadRequestException('User ID not found');
     }
+    if (createExitDto.amount <= 0) {
+      throw new BadRequestException('Amount must be greater than zero');
+    }
     return this.cryptoService.createExit(userId, createExitDto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('create-exit-usd')
+  async createExitUsd(@Request() req, @Body() createExitDto: CreateExitDto) {
+    const userId = req.user.userId;
+    if (!userId) {
+      throw new BadRequestException('User ID not found');
+    }
+    if (createExitDto.amount <= 0) {
+      throw new BadRequestException('Amount must be greater than zero');
+    }
+    return this.cryptoService.createExitUsd(userId, createExitDto);
   }
 
   @UseGuards(JwtAuthGuard)

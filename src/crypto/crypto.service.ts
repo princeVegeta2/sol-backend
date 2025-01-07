@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { SolanaService } from 'src/solana/solana.service';
 import { EntryService } from 'src/entries/entry.service';
 import { UserService } from 'src/user/user.service';
@@ -47,7 +47,63 @@ export class CryptoService {
             liquidity,
             value_usd,
         });
-        console.log('Finding holding for userId:', userId, 'and mintAddress:', createExitDto.mintAddress);
+
+        // Find the holding
+        const holding = await this.holdingService.findHoldingByUserIdAndMintAddress(userId, createExitDto.mintAddress);
+        if (!holding) {
+            throw new Error('Holding not found');
+        }
+        if (holding.amount < createExitDto.amount) {
+            throw new BadRequestException('You do not have enough tokens');
+        }
+        if (holding.amount === createExitDto.amount) {
+            // Delete holding
+            this.holdingService.deleteHolding(holding);
+            return null;
+        } else {
+            // Update the holding with the exit amount
+            await this.holdingService.updateHoldingExit(holding, createExitDto.amount);
+            return ({
+                amount: holding.amount,
+                price: holding.price,
+                value_usd: holding.value_usd,
+                pnl: holding.pnl,
+                updated_at: holding.updatedAt
+            });
+        }
+    }
+
+    async createExitUsd(userId: number, createExitDto: CreateExitDto) {
+        const user = await this.userService.findUserById(userId);
+        if (!user) {
+            throw new Error('User not found');
+        }
+
+        const tokenData = await this.solanaService.getTokenData(createExitDto.mintAddress);
+        if (!tokenData) {
+            throw new Error('Token not found');
+        }
+
+        const price = parseFloat(tokenData.priceUsd);
+        const marketcap = parseFloat(tokenData.marketCap);
+        const liquidity = parseFloat(tokenData.liquidity.usd);
+
+        // Calculate amount of tokens with full precision
+        const amountOfTokens = createExitDto.amount / price;
+
+        // Calculate USD value based on the precise amount of tokens
+        const value_usd = price * amountOfTokens;
+
+        // Create the exit
+        await this.exitService.createExit({
+            user,
+            mintAddress: createExitDto.mintAddress,
+            amount: amountOfTokens, // Use precise token amount here
+            price,
+            marketcap,
+            liquidity,
+            value_usd,
+        });
 
         // Find the holding
         const holding = await this.holdingService.findHoldingByUserIdAndMintAddress(userId, createExitDto.mintAddress);
@@ -55,12 +111,34 @@ export class CryptoService {
             throw new Error('Holding not found');
         }
 
-        if (holding.amount <= createExitDto.amount) {
-            // Delete holding
-            this.holdingService.deleteHolding(holding);
-        }else {
+        if (holding.value_usd < value_usd) {
+            throw new BadRequestException('You do not have enough tokens');
+        }
+
+        // Subtract the exited tokens and update the holding
+        const updatedAmount = holding.amount - amountOfTokens;
+        const updatedValueUsd = holding.value_usd - value_usd;
+
+        // Treat very small values as zero to prevent floating-point errors
+        const epsilon = 0.000001; // Precision threshold for amount
+        const usdEpsilon = 0.0001; // Precision threshold for value_usd
+
+        if (updatedAmount <= epsilon || updatedValueUsd <= usdEpsilon) {
+            // Delete holding if the remaining amount or value_usd is effectively zero
+            await this.holdingService.deleteHolding(holding);
+            return null;
+        } else {
             // Update the holding with the exit amount
-            await this.holdingService.updateHoldingExit(holding, createExitDto.amount);
+            holding.amount = parseFloat(updatedAmount.toFixed(6)); // Ensure precision
+            holding.value_usd = parseFloat(updatedValueUsd.toFixed(4)); // Ensure precision
+            await this.holdingService.updateHoldingExit(holding, amountOfTokens);
+            return {
+                amount: holding.amount,
+                price: holding.price,
+                value_usd: holding.value_usd,
+                pnl: holding.pnl,
+                updated_at: holding.updatedAt,
+            };
         }
     }
 
@@ -82,8 +160,10 @@ export class CryptoService {
         const marketcap = parseFloat(tokenData.marketCap);
         const liquidity = parseFloat(tokenData.liquidity.usd);
         const value_usd = price * createEntryDto.amount;
+        const name = tokenData.quoteToken.name;
+        const ticker = tokenData.quoteToken.symbol;
         const image = tokenData.info.imageUrl;
-        const website = tokenData.info.websites.url;
+        const website = tokenData.info.websites[0].url;
         const x_page = tokenData.info.socials[0].url;
         const telegram = tokenData.info.socials[1].url;
         const holding = await this.holdingService.findHoldingByUserIdAndMintAddress(userId, createEntryDto.mintAddress);
@@ -116,17 +196,37 @@ export class CryptoService {
         // Create metadata entry
         const existingMetadata = await this.tokenMetadataService.findTokenDataByMintAddress(createEntryDto.mintAddress);
 
-        if (!existingMetadata) {
-            await this.tokenMetadataService.createTokenMetadata({
-                mint_address: createEntryDto.mintAddress,
-                image,
-                website,
-                x_page,
-                telegram,
-            });
+        // Return only non-sensitive fields in the response
+        if (existingMetadata) {
+            return {
+                id: entry.id,
+                mintAddress: entry.mintAddress,
+                amount: entry.amount,
+                source: entry.source,
+                price: entry.price,
+                marketcap: entry.marketcap,
+                liquidity: entry.liquidity,
+                name: existingMetadata.name,
+                ticker: existingMetadata.ticker,
+                image: existingMetadata.image,
+                website: existingMetadata.website,
+                x_page: existingMetadata.x_page,
+                telegram: existingMetadata.telegram,
+                createdAt: entry.createdAt,
+                updatedAt: entry.updatedAt,
+            };
         }
 
-        // Return only non-sensitive fields in the response
+        const newMetadata = await this.tokenMetadataService.createTokenMetadata({
+            name: name,
+            ticker: ticker,
+            mint_address: createEntryDto.mintAddress,
+            image,
+            website,
+            x_page,
+            telegram,
+        });
+
         return {
             id: entry.id,
             mintAddress: entry.mintAddress,
@@ -135,10 +235,80 @@ export class CryptoService {
             price: entry.price,
             marketcap: entry.marketcap,
             liquidity: entry.liquidity,
+            name: newMetadata.name,
+            ticker: newMetadata.ticker,
+            image: newMetadata.image,
+            website: newMetadata.website,
+            x_page: newMetadata.x_page,
+            telegram: newMetadata.telegram,
             createdAt: entry.createdAt,
             updatedAt: entry.updatedAt,
         };
     }
+
+    async createEntryUsd(userId: number, createEntryDto: CreateEntryDto) {
+        const user = await this.userService.findUserById(userId);
+        if (!user) {
+            throw new Error('User not found');
+        }
+
+        const tokenData = await this.solanaService.getTokenData(createEntryDto.mintAddress);
+        if (!tokenData) {
+            throw new Error('Token not found');
+        }
+
+        const price = parseFloat(tokenData.priceUsd);
+        const marketcap = parseFloat(tokenData.marketCap);
+        const liquidity = parseFloat(tokenData.liquidity.usd);
+
+        // Calculate amount of tokens with full precision
+        const amountOfTokens = createEntryDto.amount / price;
+
+        // Calculate USD value based on precise token amount
+        const value_usd = price * amountOfTokens;
+
+        const holding = await this.holdingService.findHoldingByUserIdAndMintAddress(userId, createEntryDto.mintAddress);
+
+        // Create a holding entry
+        if (!holding) {
+            await this.holdingService.createHolding({
+                user,
+                mintAddress: createEntryDto.mintAddress,
+                amount: amountOfTokens, // Use precise token amount here
+                price,
+                value_usd,
+                pnl: 0,
+            });
+        } else {
+            await this.holdingService.updateHoldingEntry(holding, amountOfTokens);
+        }
+
+        // Create an entry in the entries table
+        const entry = await this.entryService.createEntry({
+            user,
+            mintAddress: createEntryDto.mintAddress,
+            amount: amountOfTokens, // Use precise token amount here
+            source: createEntryDto.source,
+            price,
+            marketcap,
+            liquidity,
+            value_usd,
+        });
+
+        return {
+            id: entry.id,
+            mintAddress: entry.mintAddress,
+            amount: entry.amount,
+            source: entry.source,
+            price: entry.price,
+            marketcap: entry.marketcap,
+            liquidity: entry.liquidity,
+            value_usd: entry.value_usd,
+            createdAt: entry.createdAt,
+            updatedAt: entry.updatedAt,
+        };
+    }
+
 
     // Update all holdings of user with the new price
     async updateHoldingsPrice(userId: number) {
@@ -146,7 +316,7 @@ export class CryptoService {
         if (!holdings || holdings.length === 0) {
             throw new Error('This user has no holdings');
         }
-    
+
         // Use `Promise.all` to wait for all async operations
         await Promise.all(
             holdings.map(async (holding) => {
@@ -157,12 +327,12 @@ export class CryptoService {
                 await this.holdingService.updateHoldingPrice(holding, newPrice);
             })
         );
-    
+
         // Fetch and return the updated holdings
         const updatedHoldings = await this.holdingService.findAllUserHoldingsByUserId(userId);
         return updatedHoldings;
     }
-    
+
     // Get balance data of the user
     async getBalanceData(userId: number) {
         const balance = await this.usdBalanceService.getBalanceDataByUserId(userId);
@@ -182,7 +352,7 @@ export class CryptoService {
 
     // Redeem 100$
     async redeemOneHundred(userId: number) {
-        const updatedBalance =  await this.usdBalanceService.redeemHundred(userId);
+        const updatedBalance = await this.usdBalanceService.redeemHundred(userId);
         if (!updatedBalance) {
             throw new Error('Failed to redeem 100$');
         }
@@ -191,7 +361,7 @@ export class CryptoService {
 
     // Redeem 1000$
     async redeemOneThousand(userId: number) {
-        const updatedBalance =  await this.usdBalanceService.redeemThousand(userId);
+        const updatedBalance = await this.usdBalanceService.redeemThousand(userId);
         if (!updatedBalance) {
             throw new Error('Failed to redeem 1000$');
         }

@@ -5,13 +5,13 @@ import { Holding } from "./holding.entity";
 import { User } from "src/user/user.entity";
 import { UserService } from "src/user/user.service";
 
-@Injectable()   
+@Injectable()
 export class HoldingService {
     constructor(
         @InjectRepository(Holding)
         private holdingRepository: Repository<Holding>,
-        private userService : UserService,
-    ) {}
+        private userService: UserService,
+    ) { }
 
     async createHolding(holdingData: {
         user: User;
@@ -34,19 +34,26 @@ export class HoldingService {
         const result = await this.holdingRepository.query(query, [userId, mintAddress]);
         return result[0] || null;
     }
-    
+
 
     async updateHoldingEntry(holding: Holding, amount: number): Promise<Holding> {
-        holding.amount = holding.amount + amount;
-        holding.value_usd = holding.price * holding.amount;
+        const holdingAmount = parseFloat(holding.amount.toString()); // Ensure holding.amount is a number
+        const additionalAmount = parseFloat(amount.toString()); // Ensure amount is a number
+
+        holding.amount = parseFloat((holdingAmount + additionalAmount).toFixed(6)); // Add precise tokens
+        holding.value_usd = parseFloat((holding.price * holding.amount).toFixed(4)); // Update USD value
         return this.holdingRepository.save(holding);
     }
 
     async updateHoldingExit(holding: Holding, amount: number): Promise<Holding> {
-        holding.amount = holding.amount - amount;
-        holding.value_usd = holding.price * holding.amount;
+        const holdingAmount = parseFloat(holding.amount.toString()); // Ensure holding.amount is a number
+        const exitAmount = parseFloat(amount.toString()); // Ensure amount is a number
+
+        holding.amount = parseFloat((holdingAmount - exitAmount).toFixed(6)); // Subtract precise tokens
+        holding.value_usd = parseFloat((holding.price * holding.amount).toFixed(4)); // Update USD value
         return this.holdingRepository.save(holding);
     }
+
 
     async updateHoldingPnl(holding: Holding, currentPrice: number): Promise<Holding> {
         const entryValue = holding.amount * holding.price;
@@ -72,5 +79,5 @@ export class HoldingService {
             .createQueryBuilder('holding')
             .where('holding.user_id = :userId', { userId })
             .getMany();
-    }    
+    }
 }

@@ -5,6 +5,12 @@ export class TokenMetadata {
     @PrimaryGeneratedColumn()
     id: number;
 
+    @Column({ type: 'varchar', length: 255, nullable: false })
+    name: string;
+
+    @Column({ type: 'varchar', length: '10', nullable: false })
+    ticker: string;
+
     @Column({ type: 'varchar', length: 255 })
     mint_address: string;
 

@@ -21,7 +21,7 @@ import {
     @Column({ name: 'mint_address', type: 'varchar', length: 255 })
     mintAddress: string;
 
-    @Column({ type: 'int' })
+    @Column({ type: 'numeric', precision: 30, scale: 6, nullable: false })
     amount: number;
 
     @Column({ type: 'numeric', precision: 15, scale: 15, nullable: false })

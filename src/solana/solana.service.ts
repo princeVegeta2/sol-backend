@@ -90,9 +90,9 @@ export class SolanaService {
 
             return {
                 quoteToken: {
-                    address: pair.quoteToken.address,
-                    name: pair.quoteToken.name,
-                    symbol: pair.quoteToken.symbol,
+                    address: pair.baseToken.address,
+                    name: pair.baseToken.name,
+                    symbol: pair.baseToken.symbol,
                 },
                 priceNative: pair.priceNative,
                 priceUsd: pair.priceUsd,
