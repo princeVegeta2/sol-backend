@@ -9,7 +9,39 @@ import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 export class CryptoController {
   constructor(
     private readonly solanaService: SolanaService,
-    private readonly cryptoService: CryptoService) {}
+    private readonly cryptoService: CryptoService) { }
+
+  @Get('token-quote')
+  async getTokenQuote(
+    @Query('outputMint') outputMint: string,
+    @Query('amount') amount: string,
+    @Query('slippage') slippage: string
+  ) {
+    const numericAmount = parseInt(amount, 10); // Convert amount to a number
+    const numericSlippage = parseInt(slippage, 10);
+    if (isNaN(numericAmount) || numericAmount <= 0) {
+      throw new BadRequestException('Invalid amount parameter');
+    }
+
+    return this.solanaService.getTokenQuoteSolInput(outputMint, numericAmount, numericSlippage);
+  }
+
+  @Get('sol-quote')
+  async getSolQuote(
+    @Query('inputMint') outputMint: string,
+    @Query('amount') amount: string,
+    @Query('slippage') slippage: string,
+    @Query('decimals') tokenDecimals: string
+  ) {
+    const numericAmount = parseInt(amount, 10); // Convert amount to a number
+    const numericSlippage = parseInt(slippage, 10);
+    const numericDecimals = parseInt(tokenDecimals, 10);
+    if (isNaN(numericAmount) || numericAmount <= 0) {
+      throw new BadRequestException('Invalid amount parameter');
+    }
+
+    return this.solanaService.getTokenQuoteSolOutput(outputMint, numericAmount, numericSlippage, numericDecimals);
+  }
 
   @Get('token-data')
   async getTokenData(@Query('mintAddress') mintAddress: string) {

@@ -1,16 +1,88 @@
 import { Injectable } from '@nestjs/common';
-import { Connection, PublicKey } from '@solana/web3.js';
+import { Connection, Keypair, VersionedTransaction } from '@solana/web3.js';
 import axios from 'axios';
 
 @Injectable()
 export class SolanaService {
     private readonly connection: Connection;
+    private readonly solMint = 'So11111111111111111111111111111111111111112';
 
     constructor() {
         // Initialize a connection to the Solana blockchain using QuickNode RPC URL
         const rpcUrl = process.env.QUICKNODE_RPC_URL; // Make sure this is in your .env file
         this.connection = new Connection(rpcUrl, 'confirmed');
     }
+
+    // Minimum SOL: 0.0001
+    async getTokenQuoteSolInput(outputMint: string, solAmount: number, slippage: number): Promise<any> {
+        if (!outputMint || !solAmount || solAmount < 0.0001) {
+            throw new Error('Invalid parameters: outputMint is required, and solAmount must be at least 0.0001 SOL');
+        }
+
+        // Convert SOL to lamports (1 SOL = 1e9 lamports)
+        const lamports = Math.round(solAmount * 1e9); // Safe to use Number here
+
+        const jupApiUrl = `https://quote-api.jup.ag/v6/quote?inputMint=${this.solMint}&outputMint=${outputMint}&amount=${lamports}&slippageBps=${slippage}`;
+
+        try {
+            const quoteResponse = await axios.get(jupApiUrl);
+            return quoteResponse.data; // Return only the data
+        } catch (error) {
+            console.error('Error fetching token quote:', error.response?.data || error.message);
+            throw new Error('Failed to fetch token quote from Jupiter API');
+        }
+    }
+
+    async getTokenQuoteSolOutputTest(inputMint: string, tokenAmount: number, slippage: number): Promise<any> {
+        if (!inputMint || !tokenAmount || tokenAmount < 0.0001) {
+            throw new Error('Invalid parameters: inputMint is required, and tokenAmount must be at least 0.0001');
+        }
+
+        const jupApiUrl = `https://quote-api.jup.ag/v6/quote?inputMint=${inputMint}&outputMint=${this.solMint}&amount=${tokenAmount}&slippageBps=${slippage}`;
+        const solUsdValue = await this.getTokenPrice(this.solMint);
+        const decimals = 6;
+
+        try {
+            const quoteResponse = await axios.get(jupApiUrl);
+            return quoteResponse.data;
+        } catch (error) {
+            console.error('Error fetching token quote:', error.response?.data || error.message);
+            throw new Error('Failed to fetch token quote from Jupiter API');
+        }
+    }
+
+    // Minimum SOL: 0.0001
+    async getTokenQuoteSolOutput(inputMint: string, tokenAmount: number, slippage: number, tokenDecimals: number): Promise<any> {
+        if (!inputMint || !tokenAmount || tokenAmount < 0.0001) {
+            throw new Error('Invalid parameters: inputMint is required, and tokenAmount must be at least 0.0001');
+        }
+
+        // Convert the token amount to its smallest unit based on the token's decimals
+        const tokenAmountInSmallestUnits = Math.round(tokenAmount * Math.pow(10, tokenDecimals));
+
+        const jupApiUrl = `https://quote-api.jup.ag/v6/quote?inputMint=${inputMint}&outputMint=${this.solMint}&amount=${tokenAmountInSmallestUnits}&slippageBps=${slippage}`;
+        const solUsdValue = await this.getTokenPrice(this.solMint);
+
+        try {
+            const quoteResponse = await axios.get(jupApiUrl);
+
+            // Parse the response
+            const outAmountThreshold = parseFloat(quoteResponse.data.otherAmountThreshold) / Math.pow(10, 9); // Convert to SOL (SOL has 9 decimals)
+            const outAmountUsdValue = parseFloat((outAmountThreshold * solUsdValue).toFixed(4)); // Convert to USD
+
+            return {
+                normalizedThresholdSol: outAmountThreshold.toFixed(6), // Guaranteed amount in SOL (normalized)
+                usdValue: outAmountUsdValue, // USD value of the guaranteed amount
+                priceImpactPct: (parseFloat(quoteResponse.data.priceImpactPct) * 100).toFixed(2), // Price impact in %
+                slippage: (slippage / 100).toFixed(2) + '%', // Slippage in %
+            };
+        } catch (error) {
+            console.error('Error fetching token quote:', error.response?.data || error.message);
+            throw new Error('Failed to fetch token quote from Jupiter API');
+        }
+    }
+
+
 
     async getTokenData(mintAddress: string): Promise<any> {
         try {

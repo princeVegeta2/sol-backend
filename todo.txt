@@ -1,6 +1,2 @@
-1) Create backend for USD balance
-2) Make sure the price impact is factored in
-3)  the jup quote includes price impact and everything. 
-the only thing is slippage and whether the transaction actually goes thru. 
-like in reality you may have to get a 10% worse price to actually make the tx happen
-4) Fix no website for token_matadata
+1) Use SOL to create entries/exits show the USD values as frontend instead. Remember than 1 sol = 1 000 000 000 lamports
+2) Factor in price impact
