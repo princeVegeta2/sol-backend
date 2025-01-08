@@ -7,9 +7,15 @@ export class CreateEntryDto {
 
   @IsNumber()
   @IsPositive()
+  @IsNotEmpty()
   amount: number;
 
   @IsString()
   @IsNotEmpty()
   source: string;
+
+  @IsNumber()
+  @IsPositive()
+  @IsNotEmpty()
+  slippage: number;
 }

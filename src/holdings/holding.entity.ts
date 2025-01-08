@@ -30,6 +30,9 @@ import {
     @Column({ type: 'numeric', precision: 30, scale: 4, default: 0 })
     value_usd: number;
 
+    @Column({ type: 'numeric', precision: 30, scale: 4, default: 0 })
+    value_sol: number;
+
     @Column({ type: 'numeric', precision: 30, scale: 4, default: 0})
     pnl: number;
 

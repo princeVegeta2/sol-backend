@@ -16,10 +16,11 @@ export class ExitService {
             user: User;
             mintAddress: string;
             amount: number;
-            price?: number;
-            marketcap?: number;
-            liquidity?: number;
-            value_usd?: number;
+            value_usd: number;
+            value_sol: number;
+            price: number;
+            marketcap: number;
+            liquidity: number;
         }): Promise<Exit> {
         const newExit = this.exitRepository.create(exitData);
         return this.exitRepository.save(newExit);

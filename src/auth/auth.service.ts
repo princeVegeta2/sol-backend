@@ -2,14 +2,14 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { UserService } from 'src/user/user.service';
 import { JwtService } from '@nestjs/jwt';
 import { User } from 'src/user/user.entity'; // Ensure you import your User entity
-import { UsdBalanceService } from 'src/balance/usd_balance.service';
+import { SolBalanceService } from 'src/balance/sol_balance.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private userService: UserService,
     private jwtService: JwtService,
-    private usdBalanceService: UsdBalanceService,
+    private solBalanceService: SolBalanceService,
   ) {}
 
   /**
@@ -51,14 +51,16 @@ export class AuthService {
    */
   async createUser(username: string, email: string, password: string) {
     const newUser = await this.userService.createUser(username, email, password);
-    await this.usdBalanceService.createBalance({
+    await this.solBalanceService.createBalance({
       user: newUser,
       balance: 0,
+      balance_usd: 0,
       total_redeemed: 0,
-      hundred_redeemable: true,
-      thousand_redeemable: true,
-      last_hundred_redeemed_at: null,
-      last_thousand_redeemed_at: null,
+      total_usd_redeemed: 0,
+      one_redeemable: true,
+      five_redeemable: true,
+      last_one_redeemed_at: null,
+      last_five_redeemed_at: null,
     });
 
     return {

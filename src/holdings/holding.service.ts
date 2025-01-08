@@ -19,6 +19,7 @@ export class HoldingService {
         amount: number;
         price: number;
         value_usd: number;
+        value_sol: number;
         pnl: number;
     }): Promise<Holding> {
         const newHolding = this.holdingRepository.create(holdingData);
@@ -36,36 +37,48 @@ export class HoldingService {
     }
 
 
-    async updateHoldingEntry(holding: Holding, amount: number): Promise<Holding> {
+    async updateHoldingEntry(holding: Holding, amount: number, newUsdValue: number, newSolValue: number,
+        additionalUsdValue: number, additionalSolValue: number
+    ): Promise<Holding> {
         const holdingAmount = parseFloat(holding.amount.toString()); // Ensure holding.amount is a number
         const additionalAmount = parseFloat(amount.toString()); // Ensure amount is a number
 
         holding.amount = parseFloat((holdingAmount + additionalAmount).toFixed(6)); // Add precise tokens
-        holding.value_usd = parseFloat((holding.price * holding.amount).toFixed(4)); // Update USD value
+        holding.value_usd = newUsdValue + additionalUsdValue; // Update USD value
+        holding.value_sol = newSolValue + additionalSolValue;
         return this.holdingRepository.save(holding);
     }
 
-    async updateHoldingExit(holding: Holding, amount: number): Promise<Holding> {
+    async updateHoldingExit(holding: Holding, amount: number, newUsdValue: number, newSolValue: number,
+        subtractedUsdValue: number, subtractedSolValue: number
+    ): Promise<Holding> {
         const holdingAmount = parseFloat(holding.amount.toString()); // Ensure holding.amount is a number
         const exitAmount = parseFloat(amount.toString()); // Ensure amount is a number
+        const newHoldingValueUsd = newUsdValue - subtractedUsdValue;
+        const newHoldingValueSol = newSolValue - subtractedSolValue;
+
+        if (newHoldingValueUsd <= 0 || newHoldingValueSol <= 0) {
+            await this.deleteHolding(holding);
+        } 
 
         holding.amount = parseFloat((holdingAmount - exitAmount).toFixed(6)); // Subtract precise tokens
-        holding.value_usd = parseFloat((holding.price * holding.amount).toFixed(4)); // Update USD value
+        holding.value_usd = newUsdValue - subtractedUsdValue; // Update USD value
+        holding.value_sol = newSolValue - subtractedSolValue;
         return this.holdingRepository.save(holding);
     }
 
 
-    async updateHoldingPnl(holding: Holding, currentPrice: number): Promise<Holding> {
-        const entryValue = holding.amount * holding.price;
-        const currentValue = holding.amount * currentPrice;
-        const pnl = currentValue - entryValue;
+    async updateHoldingPnl(holding: Holding, newUsdValue: number): Promise<Holding> {
+        const entryValue = holding.value_usd;
+        const pnl = newUsdValue - entryValue;
         holding.pnl = pnl;
         return this.holdingRepository.save(holding);
     }
 
-    async updateHoldingPrice(holding: Holding, price: number): Promise<Holding> {
+    async updateHoldingPrice(holding: Holding, price: number, newUsdValue: number, newSolValue: number): Promise<Holding> {
         holding.price = price;
-        holding.value_usd = holding.amount * price;
+        holding.value_usd = newUsdValue;
+        holding.value_sol = newSolValue;
         // Pnl updated in crypto.service.ts
         return this.holdingRepository.save(holding);
     }

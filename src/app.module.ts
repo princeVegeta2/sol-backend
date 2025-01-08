@@ -7,6 +7,7 @@ import { HoldingModule } from './holdings/holding.module';
 import { UserModule } from './user/user.module';
 import { TokenMetadataModule } from './metadata/token_metadata.module';
 import { ExitModule } from './exits/exit.module';
+import { SolBalanceModule } from './balance/sol_balance.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { join } from 'path';
@@ -22,6 +23,7 @@ import { join } from 'path';
     UserModule,
     TokenMetadataModule,
     ExitModule,
+    SolBalanceModule,
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

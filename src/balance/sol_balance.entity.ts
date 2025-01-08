@@ -9,8 +9,8 @@ import {
 } from 'typeorm';
 import { User } from '../user/user.entity'; 
 
-@Entity('usd_balance')
-export class UsdBalance {
+@Entity('sol_balance')
+export class SolBalance {
     @PrimaryGeneratedColumn()
     id: number;
 
@@ -18,23 +18,29 @@ export class UsdBalance {
     @JoinColumn({ name: 'user_id' })
     user: User;
 
-    @Column({ type: 'numeric', precision: 30, scale: 2, default: 0 })
+    @Column({ type: 'numeric', precision: 30, scale: 4, default: 0 })
     balance: number;
 
-    @Column({ type: 'numeric', precision: 30, scale: 2, default: 0 })
+    @Column({ type: 'numeric', precision: 30, scale: 4, default: 0 })
+    balance_usd: number;
+
+    @Column({ type: 'numeric', precision: 30, scale: 4, default: 0 })
     total_redeemed: number;
 
-    @Column({ type: 'boolean', default: true })
-    hundred_redeemable: boolean;
+    @Column({ type: 'numeric', precision: 30, scale: 4, default: 0 })
+    total_usd_redeemed: number;
 
     @Column({ type: 'boolean', default: true })
-    thousand_redeemable: boolean;
+    one_redeemable: boolean;
+
+    @Column({ type: 'boolean', default: true })
+    five_redeemable: boolean;
 
     @Column({ name: 'last_hundred_redeemed_at', type: 'timestamptz', nullable: true })
-    last_hundred_redeemed_at: Date | null;
+    last_one_redeemed_at: Date | null;
 
     @Column({ name: 'last_thousand_redeemed_at', type: 'timestamptz', nullable: true })
-    last_thousand_redeemed_at: Date | null;
+    last_five_redeemed_at: Date | null;
 
     @CreateDateColumn({ name: 'created_at', type: 'timestamptz', default: () => 'CURRENT_TIMESTAMP' })
     createdAt: Date;

@@ -11,38 +11,39 @@ export class CryptoController {
     private readonly solanaService: SolanaService,
     private readonly cryptoService: CryptoService) { }
 
-  @Get('token-quote')
-  async getTokenQuote(
-    @Query('outputMint') outputMint: string,
-    @Query('amount') amount: string,
-    @Query('slippage') slippage: string,
-    @Query('decimals') tokenDecimals: string
-  ) {
-    const numericAmount = parseInt(amount, 10); // Convert amount to a number
-    const numericSlippage = parseInt(slippage, 10);
-    const numericDecimals = parseInt(tokenDecimals, 10);
-    if (isNaN(numericAmount) || numericAmount <= 0) {
-      throw new BadRequestException('Invalid amount parameter');
+    @Get('token-quote')
+    async getTokenQuote(
+      @Query('outputMint') outputMint: string,
+      @Query('amount') amount: string,
+      @Query('slippage') slippage: string,
+    ) {
+      const numericAmount = parseFloat(amount); // Convert amount to a floating-point number
+      const numericSlippage = parseInt(slippage, 10); // Slippage as an integer
+    
+      if (isNaN(numericAmount) || numericAmount <= 0) {
+        throw new BadRequestException('Invalid amount parameter');
+      }
+      if (isNaN(numericSlippage) || numericSlippage <= 0) {
+        throw new BadRequestException('Invalid slippage parameter');
+      }
+    
+      return this.solanaService.getTokenQuoteSolInputTest(outputMint, numericAmount, numericSlippage);
     }
-
-    return this.solanaService.getTokenQuoteSolInput(outputMint, numericAmount, numericSlippage, numericDecimals);
-  }
+    
 
   @Get('sol-quote')
   async getSolQuote(
     @Query('inputMint') outputMint: string,
     @Query('amount') amount: string,
     @Query('slippage') slippage: string,
-    @Query('decimals') tokenDecimals: string
   ) {
     const numericAmount = parseInt(amount, 10); // Convert amount to a number
     const numericSlippage = parseInt(slippage, 10);
-    const numericDecimals = parseInt(tokenDecimals, 10);
     if (isNaN(numericAmount) || numericAmount <= 0) {
       throw new BadRequestException('Invalid amount parameter');
     }
 
-    return this.solanaService.getTokenQuoteSolOutput(outputMint, numericAmount, numericSlippage, numericDecimals);
+    return this.solanaService.getTokenQuoteSolOutput(outputMint, numericAmount, numericSlippage);
   }
 
   @Get('token-data')
@@ -77,19 +78,6 @@ export class CryptoController {
   }
 
   @UseGuards(JwtAuthGuard)
-  @Post('create-entry-usd')
-  async createEntryUsd(@Request() req, @Body() createEntryDto: CreateEntryDto) {
-    const userId = req.user.userId;
-    if (!userId) {
-      throw new BadRequestException('User ID not found');
-    }
-    if (createEntryDto.amount <= 0) {
-      throw new BadRequestException('Amount must be greater than zero');
-    }
-    return this.cryptoService.createEntryUsd(userId, createEntryDto);
-  }
-
-  @UseGuards(JwtAuthGuard)
   @Post('create-exit')
   async createExit(@Request() req, @Body() createExitDto: CreateExitDto) {
     const userId = req.user.userId;
@@ -100,19 +88,6 @@ export class CryptoController {
       throw new BadRequestException('Amount must be greater than zero');
     }
     return this.cryptoService.createExit(userId, createExitDto);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Post('create-exit-usd')
-  async createExitUsd(@Request() req, @Body() createExitDto: CreateExitDto) {
-    const userId = req.user.userId;
-    if (!userId) {
-      throw new BadRequestException('User ID not found');
-    }
-    if (createExitDto.amount <= 0) {
-      throw new BadRequestException('Amount must be greater than zero');
-    }
-    return this.cryptoService.createExitUsd(userId, createExitDto);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -136,22 +111,22 @@ export class CryptoController {
   }
 
   @UseGuards(JwtAuthGuard)
-  @Get('redeem-hundred')
-  async redeemHundred(@Request() req) {
+  @Get('redeem-one')
+  async redeemOneSol(@Request() req) {
     const userId = req.user.userId;
     if (!userId) {
       throw new BadRequestException('User ID not found');
     }
-    return this.cryptoService.redeemOneHundred(userId);
+    return this.cryptoService.redeemOneSol(userId);
   }
 
   @UseGuards(JwtAuthGuard)
-  @Get('redeem-thousand')
-  async redeemThousand(@Request() req) {
+  @Get('redeem-five')
+  async redeemFiveSol(@Request() req) {
     const userId = req.user.userId;
     if (!userId) {
       throw new BadRequestException('User ID not found');
     }
-    return this.cryptoService.redeemOneThousand(userId);
+    return this.cryptoService.redeemFiveSol(userId);
   }
 }

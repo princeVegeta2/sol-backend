@@ -14,30 +14,49 @@ export class SolanaService {
     }
 
     // Minimum SOL: 0.0001
-    async getTokenQuoteSolInput(outputMint: string, solAmount: number, slippage: number, tokenDecimals: number): Promise<any> {
+    async getTokenQuoteSolInput(
+        outputMint: string,
+        solAmount: number,
+        slippage: number,
+        price: number
+    ): Promise<any> {
         if (!outputMint || !solAmount || solAmount < 0.0001) {
-            throw new Error('Invalid parameters: outputMint is required, and solAmount must be at least 0.0001 SOL');
+            throw new Error('Invalid parameters...');
         }
-
-        // Convert SOL to lamports (1 SOL = 1e9 lamports)
         const lamports = Math.round(solAmount * 1e9);
 
         const jupApiUrl = `https://quote-api.jup.ag/v6/quote?inputMint=${this.solMint}&outputMint=${outputMint}&amount=${lamports}&slippageBps=${slippage}`;
 
         try {
             const quoteResponse = await axios.get(jupApiUrl);
+            const tokenDecimals = 6; // or fetch from chain for outputMint
 
-            // Parse the response
-            const outAmountThreshold = parseFloat(quoteResponse.data.otherAmountThreshold) / Math.pow(10, tokenDecimals); // Normalize to token decimals
-            const normalizedOutAmount = parseFloat(outAmountThreshold.toFixed(tokenDecimals)); // Keep it to token decimals
-            const priceImpactPct = (parseFloat(quoteResponse.data.priceImpactPct) * 100).toFixed(2); // Convert price impact to %
-            const outAmountUsdValue = parseFloat((normalizedOutAmount * await this.getTokenPrice(outputMint)).toFixed(4)); 
+            const outAmountThresholdLamports = parseFloat(quoteResponse.data.otherAmountThreshold);
+            const normalizedOutAmount = outAmountThresholdLamports / 10 ** tokenDecimals;
+
+            // Price impact
+            const priceImpactPct = parseFloat(quoteResponse.data.priceImpactPct) * 100;
+            const priceImpactMultiplier = 1 - (priceImpactPct / 100);
+
+            // Adjust for price impact
+            const effectiveTokens = normalizedOutAmount * priceImpactMultiplier;
+
+            // Use the same 'price' for in and out
+            const solUsdPrice = await this.getTokenPrice(this.solMint);
+            const inAmountUsdValue = solAmount * solUsdPrice;
+            // final usd = effective tokens * the same price
+            const effectiveUsdValue = effectiveTokens * price;
+
+            // computed solValue purely from finalUsdValue / current solUsd
+            const solValue = effectiveUsdValue / solUsdPrice;
 
             return {
-                normalizedThresholdToken: normalizedOutAmount, // Guaranteed amount in tokens
-                usdValue: outAmountUsdValue,
-                priceImpact: `${priceImpactPct}%`, // Price impact in %
-                slippage: `${(slippage / 100).toFixed(2)}%`, // Slippage in %
+                normalizedThresholdToken: parseFloat(effectiveTokens.toFixed(tokenDecimals)),
+                inAmountUsdValue,
+                usdValue: effectiveUsdValue,
+                solValue,
+                priceImpact: `${priceImpactPct.toFixed(2)}%`,
+                slippage: `${(slippage / 100).toFixed(2)}%`,
             };
         } catch (error) {
             console.error('Error fetching token quote:', error.response?.data || error.message);
@@ -46,11 +65,14 @@ export class SolanaService {
     }
 
 
+
     // Minimum SOL: 0.0001
-    async getTokenQuoteSolOutput(inputMint: string, tokenAmount: number, slippage: number, tokenDecimals: number): Promise<any> {
+    async getTokenQuoteSolOutput(inputMint: string, tokenAmount: number, slippage: number): Promise<any> {
         if (!inputMint || !tokenAmount || tokenAmount < 0.0001) {
             throw new Error('Invalid parameters: inputMint is required, and tokenAmount must be at least 0.0001');
         }
+
+        const tokenDecimals = 6;
 
         // Convert the token amount to its smallest unit based on the token's decimals
         const tokenAmountInSmallestUnits = Math.round(tokenAmount * Math.pow(10, tokenDecimals));
@@ -70,6 +92,53 @@ export class SolanaService {
                 usdValue: outAmountUsdValue, // USD value of the guaranteed amount
                 priceImpactPct: (parseFloat(quoteResponse.data.priceImpactPct) * 100).toFixed(2), // Price impact in %
                 slippage: (slippage / 100).toFixed(2) + '%', // Slippage in %
+            };
+        } catch (error) {
+            console.error('Error fetching token quote:', error.response?.data || error.message);
+            throw new Error('Failed to fetch token quote from Jupiter API');
+        }
+    }
+
+    async getTokenQuoteSolInputTest(outputMint: string, solAmount: number, slippage: number): Promise<any> {
+        if (!outputMint || !solAmount || solAmount < 0.0001) {
+            throw new Error('Invalid parameters: outputMint is required, and solAmount must be at least 0.0001 SOL');
+        }
+
+        const tokenDecimals = 6;
+
+        // Convert SOL to lamports (1 SOL = 1e9 lamports)
+        const lamports = Math.round(solAmount * 1e9);
+
+        const jupApiUrl = `https://quote-api.jup.ag/v6/quote?inputMint=${this.solMint}&outputMint=${outputMint}&amount=${lamports}&slippageBps=${slippage}`;
+
+        try {
+            const quoteResponse = await axios.get(jupApiUrl);
+
+            // Parse the response
+            const outAmountThreshold = parseFloat(quoteResponse.data.otherAmountThreshold) / Math.pow(10, tokenDecimals); // Normalize to token decimals
+            const normalizedOutAmount = parseFloat(outAmountThreshold.toFixed(tokenDecimals)); // Keep it to token decimals
+
+            // Price impact multiplier
+            const priceImpactPct = parseFloat(quoteResponse.data.priceImpactPct) * 100; // Price impact in %
+            const priceImpactMultiplier = 1 - priceImpactPct / 100;
+
+            // Effective values considering price impact
+            const effectiveTokens = normalizedOutAmount * priceImpactMultiplier; // Adjusted token amount
+            const solUsdPrice = await this.getTokenPrice(this.solMint);
+            const inAmountUsdValue = solAmount * solUsdPrice;
+            const effectiveUsdValue = parseFloat((effectiveTokens * await this.getTokenPrice(outputMint)).toFixed(4)); // Adjusted USD value
+            let solValue = effectiveUsdValue / solUsdPrice;
+            if (solValue > solAmount) {
+                solValue = solAmount;
+            }
+
+            return {
+                normalizedThresholdToken: parseFloat(effectiveTokens.toFixed(tokenDecimals)), // Guaranteed amount in tokens (before price impact)
+                inAmountUsdValue, // USD value of the input amount
+                usdValue: effectiveUsdValue, // USD value of the adjusted output amount,
+                solValue,
+                priceImpact: `${priceImpactPct.toFixed(2)}%`, // Price impact in %
+                slippage: `${(slippage / 100).toFixed(2)}%`, // Slippage in %
             };
         } catch (error) {
             console.error('Error fetching token quote:', error.response?.data || error.message);

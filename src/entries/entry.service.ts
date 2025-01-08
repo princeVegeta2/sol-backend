@@ -15,11 +15,12 @@ export class EntryService {
         user: User;
         mintAddress: string;
         amount: number;
+        value_usd: number;
+        value_sol: number;
+        price: number;
+        marketcap: number;
+        liquidity: number;
         source: string;
-        price?: number;
-        marketcap?: number;
-        liquidity?: number;
-        value_usd?: number;
     }): Promise<Entry> {
         const newEntry = this.entryRepository.create(entryData);
         return this.entryRepository.save(newEntry);

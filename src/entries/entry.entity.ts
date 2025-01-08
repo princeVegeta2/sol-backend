@@ -24,6 +24,12 @@ export class Entry {
   @Column({ type: 'numeric', precision: 30, scale: 6, nullable: false })
   amount: number;
 
+  @Column({ type: 'numeric', precision: 30, scale: 4, default: 0 })
+  value_usd: number;
+
+  @Column({ type: 'numeric', precision: 30, scale: 4, default: 0 })
+  value_sol: number;
+
   @Column({ type: 'numeric', precision: 30, scale: 10, default: 0 })
   price: number;
 
@@ -35,9 +41,6 @@ export class Entry {
 
   @Column({ name: 'source', type: 'varchar', length: 255 })
   source: string;
-
-  @Column({ type: 'numeric', precision: 30, scale: 4, default: 0 })
-  value_usd: number;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz', default: () => 'CURRENT_TIMESTAMP' })
   createdAt: Date;

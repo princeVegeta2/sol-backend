@@ -1,14 +1,14 @@
 import { Injectable, BadRequestException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
-import { UsdBalance } from "./usd_balance.entity";
+import { SolBalance } from "./sol_balance.entity";
 import { User } from "src/user/user.entity";
 
 @Injectable()
-export class UsdBalanceService {
+export class SolBalanceService {
     constructor(
-        @InjectRepository(UsdBalance)
-        private usdBalanceRepository: Repository<UsdBalance>,
+        @InjectRepository(SolBalance)
+        private solBalanceRepository: Repository<SolBalance>,
     ) { }
 
     formatToTwoDecimals(value: any): number {
@@ -23,30 +23,32 @@ export class UsdBalanceService {
     async createBalance(balanceData: {
         user: User;
         balance: number;
+        balance_usd: number;
         total_redeemed: number;
-        hundred_redeemable: boolean;
-        thousand_redeemable: boolean;
-        last_hundred_redeemed_at: Date | null;
-        last_thousand_redeemed_at: Date | null;
-    }): Promise<UsdBalance> {
-        const newUsdBalance = this.usdBalanceRepository.create(balanceData);
-        return this.usdBalanceRepository.save(newUsdBalance);
+        total_usd_redeemed: number;
+        one_redeemable: boolean;
+        five_redeemable: boolean;
+        last_one_redeemed_at: Date | null;
+        last_five_redeemed_at: Date | null;
+    }): Promise<SolBalance> {
+        const newSolBalance = this.solBalanceRepository.create(balanceData);
+        return this.solBalanceRepository.save(newSolBalance);
     }
 
     // Get balance data by user id
-    async getBalanceDataByUserId(userId: number): Promise<UsdBalance> {
-        return this.usdBalanceRepository.findOne({ where: { user: { id: userId } } });
+    async getBalanceDataByUserId(userId: number): Promise<SolBalance> {
+        return this.solBalanceRepository.findOne({ where: { user: { id: userId } } });
     }
 
     // Redeem 100$
-    async redeemHundred(userId: number): Promise<UsdBalance> {
-        const balance = await this.usdBalanceRepository.findOne({ where: { user: { id: userId } } });
+    async redeemOne(userId: number): Promise<SolBalance> {
+        const balance = await this.solBalanceRepository.findOne({ where: { user: { id: userId } } });
     
         if (!balance) {
             throw new BadRequestException("Balance record not found for this user.");
         }
     
-        if (!balance.hundred_redeemable) {
+        if (!balance.one_redeemable) {
             throw new BadRequestException("You cannot redeem $100 right now. Please wait for the cooldown to expire.");
         }
     
@@ -59,21 +61,21 @@ export class UsdBalanceService {
         balance.total_redeemed = this.formatToTwoDecimals(currentTotalRedeemed + 100);
     
         // Update cooldown flags and timestamps
-        balance.hundred_redeemable = false;
-        balance.last_hundred_redeemed_at = new Date();
+        balance.one_redeemable = false;
+        balance.last_one_redeemed_at = new Date();
     
-        return this.usdBalanceRepository.save(balance);
+        return this.solBalanceRepository.save(balance);
     }
     
     // Redeem 1000$
-    async redeemThousand(userId: number): Promise<UsdBalance> {
-        const balance = await this.usdBalanceRepository.findOne({ where: { user: { id: userId } } });
+    async redeemFive(userId: number): Promise<SolBalance> {
+        const balance = await this.solBalanceRepository.findOne({ where: { user: { id: userId } } });
     
         if (!balance) {
             throw new BadRequestException("Balance record not found for this user.");
         }
     
-        if (!balance.thousand_redeemable) {
+        if (!balance.five_redeemable) {
             throw new BadRequestException("You cannot redeem $1000 right now. Please wait for the cooldown to expire.");
         }
     
@@ -86,9 +88,9 @@ export class UsdBalanceService {
         balance.total_redeemed = this.formatToTwoDecimals(currentTotalRedeemed + 1000);
     
         // Update cooldown flags and timestamps
-        balance.thousand_redeemable = false;
-        balance.last_thousand_redeemed_at = new Date();
+        balance.five_redeemable = false;
+        balance.last_five_redeemed_at = new Date();
     
-        return this.usdBalanceRepository.save(balance);
+        return this.solBalanceRepository.save(balance);
     }
 }

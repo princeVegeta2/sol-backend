@@ -24,6 +24,12 @@ export class Exit {
     @Column({ type: 'numeric', precision: 30, scale: 6, nullable: false })
     amount: number;
 
+    @Column({ type: 'numeric', precision: 30, scale: 4, default: 0 })
+    value_usd: number;
+
+    @Column({ type: 'numeric', precision: 30, scale: 4, default: 0 })
+    value_sol: number;
+
     @Column({ type: 'numeric', precision: 30, scale: 10, default: 0 })
     price: number;
 
@@ -32,9 +38,6 @@ export class Exit {
 
     @Column({ type: 'numeric', precision: 32, scale: 4, nullable: true })
     liquidity: number;
-
-    @Column({ type: 'numeric', precision: 30, scale: 4, default: 0 })
-    value_usd: number;
 
     @CreateDateColumn({ name: 'created_at', type: 'timestamptz', default: () => 'CURRENT_TIMESTAMP' })
     createdAt: Date;

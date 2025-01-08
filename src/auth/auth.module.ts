@@ -7,7 +7,7 @@ import { JwtStrategy } from './jwt.strategy';
 import { UserModule } from '../user/user.module'; // Import UserModule
 import * as dotenv from 'dotenv';
 import { AuthController } from './auth.controller';
-import { UsdBalanceModule } from 'src/balance/usd_balance.module';
+import { SolBalanceModule } from 'src/balance/sol_balance.module';
 dotenv.config();
 
 @Module({
@@ -18,7 +18,7 @@ dotenv.config();
       signOptions: { expiresIn: '1h' },
     }),
     UserModule,
-    UsdBalanceModule,
+    SolBalanceModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, LocalStrategy, JwtStrategy],

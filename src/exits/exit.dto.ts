@@ -7,5 +7,11 @@ export class CreateExitDto {
   
     @IsNumber()
     @IsPositive()
+    @IsNotEmpty()
     amount: number;
+
+    @IsNumber()
+    @IsPositive()
+    @IsNotEmpty()
+    slippage: number;
 }
