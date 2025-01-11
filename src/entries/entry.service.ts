@@ -9,7 +9,7 @@ export class EntryService {
     constructor(
         @InjectRepository(Entry)
         private entryRepository: Repository<Entry>,
-    ) {}
+    ) { }
 
     async createEntry(entryData: {
         user: User;
@@ -26,14 +26,15 @@ export class EntryService {
         return this.entryRepository.save(newEntry);
     }
 
-    async findEntriesByUserIdAndMintAddress(userId: number, mintAddress: string): Promise<Entry | null> {
+    async findEntriesByUserIdAndMintAddress(userId: number, mintAddress: string): Promise<Entry[]> {
         const query = `
             SELECT * 
             FROM entries 
             WHERE user_id = $1 AND mint_address = $2
         `;
         const result = await this.entryRepository.query(query, [userId, mintAddress]);
-        return result || null;
+        return result; // Always return an array
     }
+
 
 }

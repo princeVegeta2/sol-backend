@@ -3,6 +3,7 @@ import { UserService } from 'src/user/user.service';
 import { JwtService } from '@nestjs/jwt';
 import { User } from 'src/user/user.entity'; // Ensure you import your User entity
 import { SolBalanceService } from 'src/balance/sol_balance.service';
+import { StatService } from 'src/stats/stats.service';
 
 @Injectable()
 export class AuthService {
@@ -10,6 +11,7 @@ export class AuthService {
     private userService: UserService,
     private jwtService: JwtService,
     private solBalanceService: SolBalanceService,
+    private statService: StatService,
   ) {}
 
   /**
@@ -61,6 +63,18 @@ export class AuthService {
       five_redeemable: true,
       last_one_redeemed_at: null,
       last_five_redeemed_at: null,
+    });
+
+    await this.statService.createStat({
+      user: newUser,
+      tokens_purchased: 0,
+      total_entries: 0,
+      total_exits: 0,
+      current_holdings: 0,
+      total_pnl: 0,
+      unrealized_pnl: 0,
+      realized_pnl: 0,
+      winrate: 0,
     });
 
     return {

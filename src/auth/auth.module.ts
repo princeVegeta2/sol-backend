@@ -8,6 +8,7 @@ import { UserModule } from '../user/user.module'; // Import UserModule
 import * as dotenv from 'dotenv';
 import { AuthController } from './auth.controller';
 import { SolBalanceModule } from 'src/balance/sol_balance.module';
+import { StatModule } from 'src/stats/stats.module';
 dotenv.config();
 
 @Module({
@@ -19,6 +20,7 @@ dotenv.config();
     }),
     UserModule,
     SolBalanceModule,
+    StatModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, LocalStrategy, JwtStrategy],

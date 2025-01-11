@@ -1,3 +1,1 @@
-1) Modify createExit to work like createEntry and calculate things properly
-2) Modify balance logic to use sol properly
-3) Modify createEntry and createExit to utilize balance accordingly
+1) Add sol_invested and sol_earned columns into stats, calculate their usd value in crypto service and return it
