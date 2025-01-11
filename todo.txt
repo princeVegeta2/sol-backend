@@ -1,3 +1,3 @@
-1) Use SOL to create entries/exits show the USD values as frontend instead. Remember than 1 sol = 1 000 000 000 lamports. Modify database
-2) Factor in price impact
-3) Modify the sol>token jupiter quote
+1) Modify createExit to work like createEntry and calculate things properly
+2) Modify balance logic to use sol properly
+3) Modify createEntry and createExit to utilize balance accordingly

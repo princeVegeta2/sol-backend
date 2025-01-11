@@ -1,4 +1,5 @@
 import { IsNotEmpty, IsNumber, IsPositive, IsString } from 'class-validator';
+import { Transform } from 'class-transformer';
 
 export class CreateEntryDto {
   @IsString()
@@ -7,7 +8,7 @@ export class CreateEntryDto {
 
   @IsNumber()
   @IsPositive()
-  @IsNotEmpty()
+  @Transform(({ value }) => parseFloat(value)) // Ensure it's a float
   amount: number;
 
   @IsString()
@@ -16,6 +17,6 @@ export class CreateEntryDto {
 
   @IsNumber()
   @IsPositive()
-  @IsNotEmpty()
+  @Transform(({ value }) => parseInt(value, 10)) // Ensure it's an integer
   slippage: number;
 }

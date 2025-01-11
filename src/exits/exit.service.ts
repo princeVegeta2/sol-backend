@@ -21,6 +21,7 @@ export class ExitService {
             price: number;
             marketcap: number;
             liquidity: number;
+            pnl: number;
         }): Promise<Exit> {
         const newExit = this.exitRepository.create(exitData);
         return this.exitRepository.save(newExit);

@@ -26,4 +26,14 @@ export class EntryService {
         return this.entryRepository.save(newEntry);
     }
 
+    async findEntriesByUserIdAndMintAddress(userId: number, mintAddress: string): Promise<Entry | null> {
+        const query = `
+            SELECT * 
+            FROM entries 
+            WHERE user_id = $1 AND mint_address = $2
+        `;
+        const result = await this.entryRepository.query(query, [userId, mintAddress]);
+        return result || null;
+    }
+
 }

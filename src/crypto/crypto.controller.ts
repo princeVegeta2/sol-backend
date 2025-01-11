@@ -3,13 +3,15 @@ import { SolanaService } from '../solana/solana.service';
 import { CreateEntryDto } from '../entries/entry.dto';
 import { CreateExitDto } from 'src/exits/exit.dto';
 import { CryptoService } from './crypto.service';
+import { SolBalanceService } from 'src/balance/sol_balance.service';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 
 @Controller('crypto')
 export class CryptoController {
   constructor(
     private readonly solanaService: SolanaService,
-    private readonly cryptoService: CryptoService) { }
+    private readonly cryptoService: CryptoService,
+    private readonly solBalanceService: SolBalanceService) { }
 
     @Get('token-quote')
     async getTokenQuote(
@@ -128,5 +130,15 @@ export class CryptoController {
       throw new BadRequestException('User ID not found');
     }
     return this.cryptoService.redeemFiveSol(userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('balance-status')
+  async checkBalanceStatus(@Request() req) {
+    const userId = req.user.userId;
+    if (!userId) {
+      throw new BadRequestException('User ID not found');
+    }
+    return this.solBalanceService.getRedeemingStatus(userId);
   }
 }

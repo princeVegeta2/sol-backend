@@ -36,10 +36,10 @@ export class SolBalance {
     @Column({ type: 'boolean', default: true })
     five_redeemable: boolean;
 
-    @Column({ name: 'last_hundred_redeemed_at', type: 'timestamptz', nullable: true })
+    @Column({ name: 'last_one_redeemed_at', type: 'timestamptz', nullable: true })
     last_one_redeemed_at: Date | null;
 
-    @Column({ name: 'last_thousand_redeemed_at', type: 'timestamptz', nullable: true })
+    @Column({ name: 'last_five_redeemed_at', type: 'timestamptz', nullable: true })
     last_five_redeemed_at: Date | null;
 
     @CreateDateColumn({ name: 'created_at', type: 'timestamptz', default: () => 'CURRENT_TIMESTAMP' })

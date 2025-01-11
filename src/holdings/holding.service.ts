@@ -18,6 +18,7 @@ export class HoldingService {
         mintAddress: string;
         amount: number;
         price: number;
+        average_price: number;
         value_usd: number;
         value_sol: number;
         pnl: number;
@@ -36,50 +37,130 @@ export class HoldingService {
         return result[0] || null;
     }
 
-
-    async updateHoldingEntry(holding: Holding, amount: number, newUsdValue: number, newSolValue: number,
-        additionalUsdValue: number, additionalSolValue: number
+    async updateHoldingEntry(
+        holding: Holding,
+        amount: number,       // newly purchased tokens (purchaseAmount)
+        price: number,        // new price for those tokens
+        newUsdValue: number | string,
+        newSolValue: number | string,
+        additionalUsdValue: number | string,
+        additionalSolValue: number | string,
     ): Promise<Holding> {
-        const holdingAmount = parseFloat(holding.amount.toString()); // Ensure holding.amount is a number
-        const additionalAmount = parseFloat(amount.toString()); // Ensure amount is a number
+        // Convert to float to avoid TypeORM string issues
+        const holdingAmount = parseFloat(holding.amount.toString());
+        const oldAvgPrice = parseFloat(holding.average_price?.toString() || '0');  // existing average price, default 0
+        const purchaseAmount = parseFloat(amount.toString());
 
-        holding.amount = parseFloat((holdingAmount + additionalAmount).toFixed(6)); // Add precise tokens
-        holding.value_usd = newUsdValue + additionalUsdValue; // Update USD value
-        holding.value_sol = newSolValue + additionalSolValue;
+        // 1) Sum up total tokens
+        const combinedAmount = holdingAmount + purchaseAmount;
+        const roundedAmount = parseFloat(combinedAmount.toFixed(6)); // or keep more decimals if desired
+
+        // 2) Recalculate average price (only if purchaseAmount > 0 and combinedAmount > 0)
+        //    Weighted average cost approach:
+        //    newAvgPrice = ((holdingAmount * oldAvgPrice) + (purchaseAmount * price)) / combinedAmount
+        let newAvgPrice = oldAvgPrice;
+        if (purchaseAmount > 0 && combinedAmount > 0) {
+            const oldTotalCost = holdingAmount * oldAvgPrice;
+            const newPurchaseCost = purchaseAmount * price;
+            const totalCost = oldTotalCost + newPurchaseCost;
+            newAvgPrice = totalCost / combinedAmount;
+        }
+
+        // Round or clamp the new average price to match DB scale if needed
+        // e.g. if you have average_price: numeric(15,15), you might do:
+        const roundedAvgPrice = parseFloat(newAvgPrice.toFixed(15));
+
+        // 3) Convert the "value" inputs to numeric
+        const oldUsdVal = Number(newUsdValue);
+        const oldSolVal = Number(newSolValue);
+        const addUsdVal = Number(additionalUsdValue);
+        const addSolVal = Number(additionalSolValue);
+
+        // 4) Combine old portion + new portion
+        const finalUsdVal = oldUsdVal + addUsdVal;   // numeric sum
+        const finalSolVal = oldSolVal + addSolVal;
+
+        // 5) Round them to 4 decimal places to match your DB scale
+        const roundedUsdValue = parseFloat(finalUsdVal.toFixed(4));
+        const roundedSolValue = parseFloat(finalSolVal.toFixed(4));
+
+        // 6) Assign back to holding
+        try {
+            holding.price = price;
+        } catch (err) {
+            throw new Error(`Failed to update holding price of ${holding.id}. Error: ${err}`)
+        }
+        holding.amount = roundedAmount;
+        holding.value_usd = roundedUsdValue;
+        holding.value_sol = roundedSolValue;
+        holding.average_price = roundedAvgPrice;  // store the new average cost in USD
+
         return this.holdingRepository.save(holding);
     }
 
-    async updateHoldingExit(holding: Holding, amount: number, newUsdValue: number, newSolValue: number,
-        subtractedUsdValue: number, subtractedSolValue: number
+    async updateHoldingExit(
+        holding: Holding,
+        amount: number,
+        oldUsdValue: number,
+        oldSolValue: number,
+        subtractedUsdValue: number,
+        subtractedSolValue: number
     ): Promise<Holding> {
-        const holdingAmount = parseFloat(holding.amount.toString()); // Ensure holding.amount is a number
-        const exitAmount = parseFloat(amount.toString()); // Ensure amount is a number
-        const newHoldingValueUsd = newUsdValue - subtractedUsdValue;
-        const newHoldingValueSol = newSolValue - subtractedSolValue;
+        // 1. Convert to float
+        const holdingAmount = parseFloat(holding.amount.toString());
+        const exitAmount = parseFloat(amount.toString());
 
-        if (newHoldingValueUsd <= 0 || newHoldingValueSol <= 0) {
-            await this.deleteHolding(holding);
-        } 
+        // 2. Subtract token amounts
+        const combinedAmount = holdingAmount - exitAmount;
+        const finalAmount = parseFloat(combinedAmount.toFixed(6));
 
-        holding.amount = parseFloat((holdingAmount - exitAmount).toFixed(6)); // Subtract precise tokens
-        holding.value_usd = newUsdValue - subtractedUsdValue; // Update USD value
-        holding.value_sol = newSolValue - subtractedSolValue;
+        // 3. Convert "value" inputs to float
+        const oldUsd = parseFloat(oldUsdValue.toString());
+        const oldSol = parseFloat(oldSolValue.toString());
+        const subtractUsd = parseFloat(subtractedUsdValue.toString());
+        const subtractSol = parseFloat(subtractedSolValue.toString());
+
+        // 4. Numeric addition (or subtraction) => leftover
+        const leftoverUsd = oldUsd - subtractUsd;
+        const leftoverSol = oldSol - subtractSol;
+
+        // 5. Round them => valid decimal strings
+        const finalUsd = parseFloat(leftoverUsd.toFixed(4));
+        const finalSol = parseFloat(leftoverSol.toFixed(4));
+
+        holding.amount = finalAmount;
+        holding.value_usd = finalUsd;
+        holding.value_sol = finalSol;
+
+        // average_price doesn't change for partial sells in average-cost approach
+        // holding.average_price = holding.average_price;
+
         return this.holdingRepository.save(holding);
     }
 
 
-    async updateHoldingPnl(holding: Holding, newUsdValue: number): Promise<Holding> {
-        const entryValue = holding.value_usd;
-        const pnl = newUsdValue - entryValue;
-        holding.pnl = pnl;
+    async updateHoldingPnl(holding: Holding, newMarketPrice: number): Promise<Holding> {
+        // "average_price" is the user’s cost basis, previously computed 
+        // when they bought tokens. We do NOT change it on a price refresh.
+
+        const costBasis = parseFloat(holding.average_price.toString()); // cost basis
+        const holdingAmount = parseFloat(holding.amount.toString());    // how many tokens the user currently holds
+
+        // PnL = (marketPrice - costBasis) * amount
+        const newPnL = (newMarketPrice - costBasis) * holdingAmount;
+
+        // Optionally clamp to 4 decimals to match DB scale
+        holding.pnl = parseFloat(newPnL.toFixed(4));
+
         return this.holdingRepository.save(holding);
     }
 
-    async updateHoldingPrice(holding: Holding, price: number, newUsdValue: number, newSolValue: number): Promise<Holding> {
+
+    async updateHoldingPrice(holding: Holding, price: number, solPrice: number): Promise<Holding> {
+        const usdValue = holding.amount * price;
         holding.price = price;
-        holding.value_usd = newUsdValue;
-        holding.value_sol = newSolValue;
-        // Pnl updated in crypto.service.ts
+        holding.value_usd = usdValue;
+        holding.value_sol = usdValue / solPrice;
         return this.holdingRepository.save(holding);
     }
 
