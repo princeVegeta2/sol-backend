@@ -28,6 +28,20 @@ export class UserService {
         return this.userRepository.findOne({ where: {email} });
     }
 
+    async userEmailExists(email: string): Promise<Boolean> {
+        const user = this.userRepository.findOne({ where: {email} });
+        const emailExists = user ? true : false;
+
+        return emailExists;
+    }
+
+    async userUsernameExists(username: string): Promise<Boolean> {
+        const user = this.userRepository.findOne({ where: {username} });
+        const usernameExists = user ? true : false;
+
+        return usernameExists;
+    }
+
     // Finds user by id
     async findUserById(id: number): Promise<User | undefined> {
         return this.userRepository.findOne({ where: { id } });
