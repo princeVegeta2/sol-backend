@@ -36,8 +36,10 @@ export class CryptoService {
             throw new BadRequestException('User stats not found');
         }
 
+        const solPrice = await this.solanaService.getTokenPrice(this.solMint);
+
         // 3. Check user’s SOL balance object
-        const balance = await this.solBalanceService.getBalanceDataByUserId(userId);
+        const balance = await this.solBalanceService.getBalanceDataByUserId(userId, solPrice);
         if (!balance) {
             throw new BadRequestException('User balance not found');
         }
@@ -197,8 +199,10 @@ export class CryptoService {
             throw new BadRequestException('User stats not found');
         }
 
+        const solPrice = await this.solanaService.getTokenPrice(this.solMint);
+
         // 3. Check user SOL balance object
-        const balance = await this.solBalanceService.getBalanceDataByUserId(userId);
+        const balance = await this.solBalanceService.getBalanceDataByUserId(userId, solPrice);
         if (!balance) {
             throw new BadRequestException('User balance not found');
         }
@@ -231,7 +235,6 @@ export class CryptoService {
         // 6. Now that everything is valid, subtract from user’s SOL balance
         //    (We do this AFTER the external calls, so if something fails above,
         //     we haven't subtracted from user)
-        const solPrice = await this.solanaService.getTokenPrice(this.solMint);
         const updatedBalance = await this.solBalanceService.updateBalanceSubtract(
             balance,
             createEntryDto.amount,
@@ -461,7 +464,8 @@ export class CryptoService {
 
     // Get balance data of the user
     async getBalanceData(userId: number) {
-        const balance = await this.solBalanceService.getBalanceDataByUserId(userId);
+        const solPrice = await this.solanaService.getTokenPrice(this.solMint);
+        const balance = await this.solBalanceService.getBalanceDataByUserId(userId, solPrice);
         if (!balance) {
             throw new Error('Balance not found');
         }
@@ -513,7 +517,7 @@ export class CryptoService {
             throw new BadRequestException('Failed to update price of SOL. Please try again');
         }
         // Fetch user balance
-        const userBalance = await this.solBalanceService.getBalanceDataByUserId(userId);
+        const userBalance = await this.solBalanceService.getBalanceDataByUserId(userId, solPrice);
         if (!userBalance) {
             throw new BadRequestException('Failed to fetch user balance data. Please try again');
         }

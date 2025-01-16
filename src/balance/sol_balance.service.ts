@@ -36,8 +36,15 @@ export class SolBalanceService {
     }
 
     // Get balance data by user id
-    async getBalanceDataByUserId(userId: number): Promise<SolBalance> {
-        return this.solBalanceRepository.findOne({ where: { user: { id: userId } } });
+    async getBalanceDataByUserId(userId: number, solPrice: number): Promise<SolBalance> {
+        const userBalance =  await this.solBalanceRepository.findOne({ where: { user: { id: userId } } });
+        const solBalance = typeof userBalance.balance === 'string' ? parseFloat(userBalance.balance) : userBalance.balance;
+        const usdBalance = typeof userBalance.balance_usd === 'string' ? parseFloat(userBalance.balance_usd) : userBalance.balance_usd;
+        const newUsdBal = solPrice ? solBalance * solPrice : usdBalance;
+        const roundedUsdBalance = parseFloat(newUsdBal.toFixed(4));;
+        userBalance.balance_usd = roundedUsdBalance;
+
+        return await this.solBalanceRepository.save(userBalance);
     }
 
     // Get redeemable status

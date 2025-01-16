@@ -28,19 +28,16 @@ export class UserService {
         return this.userRepository.findOne({ where: {email} });
     }
 
-    async userEmailExists(email: string): Promise<Boolean> {
-        const user = this.userRepository.findOne({ where: {email} });
-        const emailExists = user ? true : false;
-
-        return emailExists;
+    async userEmailExists(email: string): Promise<boolean> {
+        const user = await this.userRepository.findOne({ where: { email } }); // Add await
+        return !!user; // Simplified: converts truthy/falsy value to boolean
     }
-
-    async userUsernameExists(username: string): Promise<Boolean> {
-        const user = this.userRepository.findOne({ where: {username} });
-        const usernameExists = user ? true : false;
-
-        return usernameExists;
+    
+    async userUsernameExists(username: string): Promise<boolean> {
+        const user = await this.userRepository.findOne({ where: { username } }); // Add await
+        return !!user; // Simplified: converts truthy/falsy value to boolean
     }
+    
 
     // Finds user by id
     async findUserById(id: number): Promise<User | undefined> {

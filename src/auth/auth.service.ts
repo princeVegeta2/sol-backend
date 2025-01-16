@@ -52,13 +52,15 @@ export class AuthService {
    * @returns The created user object
    */
   async createUser(username: string, email: string, password: string) {
+    
     const emailExists = await this.userService.userEmailExists(email);
     if (emailExists) {
-      throw new BadRequestException('Email already taken');
+        throw new BadRequestException('Email already taken');
     }
+
     const usernameExists = await this.userService.userUsernameExists(username);
     if (usernameExists) {
-      throw new BadRequestException('Username already taken');
+        throw new BadRequestException('Username already taken');
     }
     
     const newUser = await this.userService.createUser(username, email, password);
