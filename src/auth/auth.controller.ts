@@ -1,9 +1,10 @@
-import { Controller, Post, Body, Request, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Body, Request, UseGuards, Req, BadRequestException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LocalAuthGuard } from './local-auth.guard';
 import { CreateUserDto } from 'src/user/create-user.dto';
 import { LoginUserDto } from 'src/user/login-user.dto';
 import { UnauthorizedException } from '@nestjs/common';
+import { JwtAuthGuard } from './jwt-auth.guard';
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {
@@ -26,5 +27,15 @@ export class AuthController {
     }
 
     return this.authService.login({ id: user.id, email: user.email }, staySignedIn);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('user-data')
+  async getUserData(@Request() req) {
+    const userId = req.user.userId;
+    if (!userId) {
+      throw new BadRequestException('Authentication failed');
+    }
+    return this.authService.getUserData(userId);
   }
 }

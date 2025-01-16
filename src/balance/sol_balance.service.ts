@@ -191,30 +191,42 @@ export class SolBalanceService {
 
         return this.solBalanceRepository.save(balance);
     }
-    
+
     async updateBalanceAdd(
         balance: SolBalance,
         amount: number | string,
         usdValue: number | string
-      ): Promise<SolBalance> {
+    ): Promise<SolBalance> {
         // Convert to float
         const oldSol = parseFloat(balance.balance.toString());
         const oldUsd = parseFloat(balance.balance_usd.toString());
-      
+
         const addSol = parseFloat(amount.toString());
         const addUsd = parseFloat(usdValue.toString());
-      
+
         const newSolBal = oldSol + addSol;   // numeric sum
         const newUsdBal = oldUsd + addUsd;   // numeric sum
-      
+
         // Round as needed
         const roundedSolBal = parseFloat(newSolBal.toFixed(4));
         const roundedUsdBal = parseFloat(newUsdBal.toFixed(4));
-      
+
         balance.balance = roundedSolBal;
         balance.balance_usd = roundedUsdBal;
-      
+
         return this.solBalanceRepository.save(balance);
-      }
-      
+    }
+
+    async updateUsdBalance(balance: SolBalance, solPrice: number) {
+        const currentBalance = typeof balance.balance === 'string' ? parseFloat(balance.balance) : balance.balance;
+        const newUsdBalance = this.formatToTwoDecimals(currentBalance * solPrice);
+        const currentTotalRedeemed = typeof balance.total_redeemed === 'string' ? parseFloat(balance.total_redeemed) : balance.total_redeemed;
+        const newUsdTotalRedeemed = this.formatToTwoDecimals(currentTotalRedeemed * solPrice);
+
+        balance.balance_usd = newUsdBalance;
+        balance.total_usd_redeemed = newUsdTotalRedeemed;
+
+        return this.solBalanceRepository.save(balance);
+    }
+
 }

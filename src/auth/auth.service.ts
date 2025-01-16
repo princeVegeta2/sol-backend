@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadGatewayException, BadRequestException, Injectable, UnauthorizedException, NotFoundException } from '@nestjs/common';
 import { UserService } from 'src/user/user.service';
 import { JwtService } from '@nestjs/jwt';
 import { User } from 'src/user/user.entity'; // Ensure you import your User entity
@@ -83,5 +83,18 @@ export class AuthService {
       email: newUser.email,
       created_at: newUser.created_at,
     }; // Return only non-sensitive fields
+  }
+
+  async getUserData(userId: number) {
+    const user = await this.userService.findUserById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    
+    return {
+      username: user.username,
+      email: user.email,
+      createdAt: user.created_at
+    };
   }
 }

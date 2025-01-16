@@ -503,4 +503,42 @@ export class CryptoService {
         }
         return updatedBalance;
     }
+
+    // Get all of the earned USD and SOL for stats
+    async getEarningsInSolAndUsd(userId: number) {
+
+        // Fetch a fresh SOL price
+        const solPrice = await this.solanaService.getTokenPrice(this.solMint);
+        if (!solPrice) {
+            throw new BadRequestException('Failed to update price of SOL. Please try again');
+        }
+        // Fetch user balance
+        const userBalance = await this.solBalanceService.getBalanceDataByUserId(userId);
+        if (!userBalance) {
+            throw new BadRequestException('Failed to fetch user balance data. Please try again');
+        }
+        // Fetch user's wins
+        const userExitWins = await this.exitService.findAllExitWinsByUserId(userId);
+        if (userExitWins) {
+            throw new BadRequestException('Failed to fetch user trade data. Please try again');
+        }
+
+        // Aggregate data
+        const pnlValues = userExitWins.map((entry) => parseFloat(entry.pnl.toString()));
+        const totalEarnedUsd = pnlValues.reduce((acc, pnl) => acc + pnl, 0);
+        const totalEarnedSol = totalEarnedUsd / solPrice;
+        const updatedBalance = await this.solBalanceService.updateUsdBalance(userBalance, solPrice);
+        if (!updatedBalance) {
+            throw new BadRequestException('Failed to update user balance. Please try again');
+        }
+
+        return({
+            totalEarnedUsd: totalEarnedUsd,
+            totalEarnedSol: totalEarnedSol,
+            currentSolBalance: updatedBalance.balance,
+            totalRedeemedSol: updatedBalance.total_redeemed,
+            updatedUsdBalance: updatedBalance.balance_usd,
+            totalRedeemedUsd: updatedBalance.total_usd_redeemed
+        });
+    }
 }

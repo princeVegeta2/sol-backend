@@ -141,4 +141,14 @@ export class CryptoController {
     }
     return this.solBalanceService.getRedeemingStatus(userId);
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('earnings-data')
+  async getEarningsData(@Request() req) {
+    const userId = req.user.userId;
+    if (!userId) {
+      throw new BadRequestException('User ID not found');
+    }
+    return this.cryptoService.getEarningsInSolAndUsd(userId);
+  }
 }
