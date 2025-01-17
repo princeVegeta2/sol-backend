@@ -36,5 +36,15 @@ export class EntryService {
         return result; // Always return an array
     }
 
+    async findAllEntriesByUserId(userId: number): Promise<Entry[]> {
+        const query = `
+            SELECT *
+            FROM entries
+            WHERE user_id = $1
+        `;
+        const result = await this.entryRepository.query(query, [userId]);
+        return result;
+    }
+
 
 }

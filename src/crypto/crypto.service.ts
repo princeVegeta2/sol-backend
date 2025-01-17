@@ -545,4 +545,56 @@ export class CryptoService {
             totalRedeemedUsd: updatedBalance.total_usd_redeemed
         });
     }
+
+    async getUserStats(userId: number) {
+        const userStats = await this.statService.findStatByUserId(userId);
+        if (!userStats) {
+            throw new BadRequestException("User statistics not found");
+        }
+        const totalEarnings = await this.calculateTotalEarningsForUser(userId);
+        return({
+            tokensPurchased: userStats.tokens_purchased,
+            totalEntries: userStats.total_entries,
+            totalExits: userStats.total_exits,
+            currentHoldings: userStats.current_holdings,
+            totalPnl: userStats.total_pnl,
+            unrealizedPnl: userStats.unrealized_pnl,
+            realizedPnl: userStats.realized_pnl,
+            winrate: userStats.winrate,
+            earnedSol: totalEarnings.earnedSol,
+            earnedUsd: totalEarnings.earnedUsd
+        });
+    }
+
+    async calculateTotalEarningsForUser(userId: number) {
+        const userEntries = await this.entryService.findAllEntriesByUserId(userId);
+        if (userEntries.length === 0 || !userEntries) {
+            return({
+                earnedSol: 0,
+                earnedhUsd: 0,
+            });
+        }
+        const entriesNetworthSol = userEntries.reduce((total, entry) => total + entry.value_sol, 0);
+        const entriesNetworthUsd =  userEntries.reduce((total, entry) => total + entry.value_usd, 0);
+        const userExits = await this.exitService.findExitsByUserId(userId);
+        if (userExits.length === 0 || !userExits) {
+            return({
+                earnedSol: entriesNetworthSol,
+                earnedUsd: entriesNetworthUsd,
+            })
+        }
+        const exitsNetworthSol = userExits.reduce((total, exit) => total + exit.value_sol, 0);
+        const exitsNetworthUsd = userExits.reduce((total, exit) => total + exit.value_usd, 0);
+
+        const solEarnings = exitsNetworthSol - entriesNetworthSol;
+        const usdEarnings = exitsNetworthUsd - entriesNetworthUsd;
+
+        const roundedSolEarnings = parseFloat(solEarnings.toFixed(4));
+        const roundedUsdEarnings = parseFloat(usdEarnings.toFixed(4));
+
+        return({
+            earnedSol: roundedSolEarnings,
+            earnedUsd: roundedUsdEarnings
+        });
+    }
 }
