@@ -39,10 +39,15 @@ export class SolBalanceService {
     async getBalanceDataByUserId(userId: number, solPrice: number): Promise<SolBalance> {
         const userBalance =  await this.solBalanceRepository.findOne({ where: { user: { id: userId } } });
         const solBalance = typeof userBalance.balance === 'string' ? parseFloat(userBalance.balance) : userBalance.balance;
+        const totalSolRedeemed = typeof userBalance.total_redeemed === 'string' ? parseFloat(userBalance.total_redeemed) : userBalance.total_redeemed;
         const usdBalance = typeof userBalance.balance_usd === 'string' ? parseFloat(userBalance.balance_usd) : userBalance.balance_usd;
+        const totalUsdRedeemed = typeof userBalance.total_usd_redeemed === 'string' ? parseFloat(userBalance.total_usd_redeemed) : userBalance.total_usd_redeemed;
+        const newTotalUsdRedeemed = solPrice ? totalSolRedeemed * solPrice : totalUsdRedeemed;
         const newUsdBal = solPrice ? solBalance * solPrice : usdBalance;
-        const roundedUsdBalance = parseFloat(newUsdBal.toFixed(4));;
+        const roundedUsdBalance = parseFloat(newUsdBal.toFixed(4));
+        const roundedTotalUsdRedeemed = parseFloat(newTotalUsdRedeemed.toFixed(4));
         userBalance.balance_usd = roundedUsdBalance;
+        userBalance.total_usd_redeemed = roundedTotalUsdRedeemed;
 
         return await this.solBalanceRepository.save(userBalance);
     }
