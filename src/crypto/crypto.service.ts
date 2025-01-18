@@ -376,6 +376,7 @@ export class CryptoService {
             return {
                 id: entry.id,
                 solBalance: updatedBalance.balance,
+                usdBalance: updatedBalance.balance_usd,
                 mintAddress: entry.mintAddress,
                 amount: entry.amount,
                 value_usd: entry.value_usd,
@@ -411,6 +412,7 @@ export class CryptoService {
         return {
             id: entry.id,
             solBalance: updatedBalance.balance,
+            usdBalance: updatedBalance.balance_usd,
             mintAddress: entry.mintAddress,
             amount: entry.amount,
             value_usd: entry.value_usd,
@@ -458,7 +460,25 @@ export class CryptoService {
 
         // Fetch and return the updated holdings
         const updatedHoldings = await this.holdingService.findAllUserHoldingsByUserId(userId);
-        return updatedHoldings;
+        const enrichedData = await Promise.all(
+            updatedHoldings.map(async (item) => {
+                // Fetch metadata using mintAddress
+                const metadata = await this.tokenMetadataService.findTokenDataByMintAddress(item.mintAddress);
+
+                // Add ticker and image to the response
+                return {
+                    ...item,
+                    name: metadata?.name || 'Unknown',
+                    ticker: metadata?.ticker || 'Unknown', // Default to 'Unknown' if metadata not found
+                    image: metadata?.image || null, // Default to null if image not found
+                    website: metadata?.website || 'N/A',
+                    xPage: metadata?.x_page || 'N/A',
+                    telegram: metadata?.telegram || 'N/A'
+                };
+            })
+        );
+        const sanitizedData = enrichedData.map(({ id, user, ...rest }) => rest);
+        return sanitizedData;
     }
 
 
