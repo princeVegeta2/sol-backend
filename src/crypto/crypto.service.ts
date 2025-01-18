@@ -265,7 +265,7 @@ export class CryptoService {
             userId,
             createEntryDto.mintAddress
         );
-        
+
         // Variables to track whether a holding exists or a token is unique for the user
         let newHolding = false;
         let uniqueUserToken = false;
@@ -536,7 +536,7 @@ export class CryptoService {
             throw new BadRequestException('Failed to update user balance. Please try again');
         }
 
-        return({
+        return ({
             totalEarnedUsd: totalEarnedUsd,
             totalEarnedSol: totalEarnedSol,
             currentSolBalance: updatedBalance.balance,
@@ -552,7 +552,7 @@ export class CryptoService {
             throw new BadRequestException("User statistics not found");
         }
         const totalEarnings = await this.calculateTotalEarningsForUser(userId);
-        return({
+        return ({
             tokensPurchased: userStats.tokens_purchased,
             totalEntries: userStats.total_entries,
             totalExits: userStats.total_exits,
@@ -569,16 +569,16 @@ export class CryptoService {
     async calculateTotalEarningsForUser(userId: number) {
         const userEntries = await this.entryService.findAllEntriesByUserId(userId);
         if (userEntries.length === 0 || !userEntries) {
-            return({
+            return ({
                 earnedSol: 0,
                 earnedhUsd: 0,
             });
         }
         const entriesNetworthSol = userEntries.reduce((total, entry) => total + entry.value_sol, 0);
-        const entriesNetworthUsd =  userEntries.reduce((total, entry) => total + entry.value_usd, 0);
+        const entriesNetworthUsd = userEntries.reduce((total, entry) => total + entry.value_usd, 0);
         const userExits = await this.exitService.findExitsByUserId(userId);
         if (userExits.length === 0 || !userExits) {
-            return({
+            return ({
                 earnedSol: entriesNetworthSol,
                 earnedUsd: entriesNetworthUsd,
             })
@@ -592,9 +592,44 @@ export class CryptoService {
         const roundedSolEarnings = parseFloat(solEarnings.toFixed(4));
         const roundedUsdEarnings = parseFloat(usdEarnings.toFixed(4));
 
-        return({
+        return ({
             earnedSol: roundedSolEarnings,
             earnedUsd: roundedUsdEarnings
         });
     }
+
+    async getAllEntriesAndExitsByUserId(userId: number) {
+        const userEntries = await this.entryService.findAllEntriesByUserId(userId);
+        const userExits = await this.exitService.findExitsByUserId(userId);
+
+        // Combine entries and exits
+        const combinedData = [
+            ...userEntries.map(entry => ({ ...entry, type: 'entry' })),
+            ...userExits.map(exit => ({ ...exit, type: 'exit' })),
+        ];
+
+        // Sort by createdAt timestamp
+        const sortedData = combinedData.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+        // Map through the sorted data and fetch metadata
+        const enrichedData = await Promise.all(
+            sortedData.map(async (item) => {
+                // Fetch metadata using mintAddress
+                const metadata = await this.tokenMetadataService.findTokenDataByMintAddress(item.mintAddress);
+
+                // Add ticker and image to the response
+                return {
+                    ...item,
+                    ticker: metadata?.ticker || 'Unknown', // Default to 'Unknown' if metadata not found
+                    image: metadata?.image || null, // Default to null if image not found
+                };
+            })
+        );
+
+        // Remove `id` and `user` fields
+        const sanitizedData = enrichedData.map(({ id, user, ...rest }) => rest);
+
+        return sanitizedData;
+    }
+
 }

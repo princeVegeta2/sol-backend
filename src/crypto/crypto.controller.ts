@@ -161,4 +161,14 @@ export class CryptoController {
     }
     return this.cryptoService.getUserStats(userId);
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('user-transactions')
+  async getUserTransactions(@Request() req) {
+    const userId = req.user.userId;
+    if (!userId) {
+      throw new BadRequestException('User ID not found');
+    }
+    return this.cryptoService.getAllEntriesAndExitsByUserId(userId);
+  }
 }
