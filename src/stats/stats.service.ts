@@ -62,8 +62,11 @@ export class StatService {
         const userWinrate = parseFloat(((totalWins / totalExits) * 100).toFixed(2));
 
         const oldTotalPnl = parseFloat(stat.total_pnl.toString());
+        const oldUnrealizedPnl = parseFloat(stat.unrealized_pnl.toString());
         const newExitPnl = parseFloat(exitPnl.toString());
+        const newUnrealizedPnl = oldUnrealizedPnl - newExitPnl;
         stat.total_pnl = oldTotalPnl + newExitPnl;
+        stat.unrealized_pnl = newUnrealizedPnl;
         const oldRealizedPnl = parseFloat(stat.realized_pnl.toString());
         stat.realized_pnl = oldRealizedPnl + newExitPnl;
         if (holdingDeleted) {
@@ -72,5 +75,16 @@ export class StatService {
         stat.winrate = userWinrate;
 
         return this.statRepository.save(stat);
+    }
+
+    async updateStatOnHoldingUpdate(stat: Stat, newUnrealizedPnl: number): Promise<Stat> {
+        const newUnrealizedPnlFormatted = parseFloat(newUnrealizedPnl.toString());
+        const oldRealizedPnl = parseFloat(stat.realized_pnl.toString());
+        const newTotalPnl = oldRealizedPnl + newUnrealizedPnlFormatted;
+
+        stat.unrealized_pnl = newUnrealizedPnlFormatted;
+        stat.total_pnl = newTotalPnl;
+
+        return await this.statRepository.save(stat);
     }
 }

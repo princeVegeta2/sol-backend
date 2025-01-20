@@ -143,16 +143,6 @@ export class CryptoController {
   }
 
   @UseGuards(JwtAuthGuard)
-  @Get('earnings-data')
-  async getEarningsData(@Request() req) {
-    const userId = req.user.userId;
-    if (!userId) {
-      throw new BadRequestException('User ID not found');
-    }
-    return this.cryptoService.getEarningsInSolAndUsd(userId);
-  }
-
-  @UseGuards(JwtAuthGuard)
   @Get('user-stats')
   async getUserStats(@Request() req) {
     const userId = req.user.userId;
