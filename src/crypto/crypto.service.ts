@@ -470,7 +470,7 @@ export class CryptoService {
         // Use Promise.all to wait for all async operations
         await Promise.all(
             holdings.map(async (holding) => {
-                const newPrice = await this.solanaService.getTokenPrice(holding.mintAddress);
+                const newPrice = await this.solanaService.getTokenSellPrice(holding.mintAddress);
                 // Must be called BEFORE price because it uses the old price in the calculation
                 await this.holdingService.updateHoldingPnl(holding, newPrice);
                 // Also updates the value_usd
@@ -507,7 +507,7 @@ export class CryptoService {
 
     // Get balance data of the user
     async getBalanceData(userId: number) {
-        const solPrice = await this.solanaService.getTokenPrice(this.solMint);
+        const solPrice = await this.solanaService.getTokenSellPrice(this.solMint);
         const balance = await this.solBalanceService.getBalanceDataByUserId(userId, solPrice);
         if (!balance) {
             throw new Error('Balance not found');
@@ -527,7 +527,7 @@ export class CryptoService {
 
     // Redeem 1 SOL
     async redeemOneSol(userId: number) {
-        const solPrice = await this.solanaService.getTokenPrice(this.solMint);
+        const solPrice = await this.solanaService.getTokenSellPrice(this.solMint);
         if (!solPrice) {
             throw new BadRequestException('Failed to update price of SOL. Please try again');
         }
@@ -540,7 +540,7 @@ export class CryptoService {
 
     // Redeem 5 SOL
     async redeemFiveSol(userId: number) {
-        const solPrice = await this.solanaService.getTokenPrice(this.solMint);
+        const solPrice = await this.solanaService.getTokenSellPrice(this.solMint);
         if (!solPrice) {
             throw new BadRequestException('Failed to update price of SOL. Please try again');
         }

@@ -42,7 +42,7 @@ export class SolanaService {
             const effectiveTokens = normalizedOutAmount * priceImpactMultiplier;
 
             // Use the same 'price' for in and out
-            const solUsdPrice = await this.getTokenPrice(this.solMint);
+            const solUsdPrice = await this.getTokenSellPrice(this.solMint);
             const inAmountUsdValue = solAmount * solUsdPrice;
             // final usd = effective tokens * the same price
             const effectiveUsdValue = effectiveTokens * price;
@@ -78,7 +78,7 @@ export class SolanaService {
         const tokenAmountInSmallestUnits = Math.round(tokenAmount * Math.pow(10, tokenDecimals));
 
         const jupApiUrl = `https://quote-api.jup.ag/v6/quote?inputMint=${inputMint}&outputMint=${this.solMint}&amount=${tokenAmountInSmallestUnits}&slippageBps=${slippage}`;
-        const solUsdValue = await this.getTokenPrice(this.solMint);
+        const solUsdValue = await this.getTokenSellPrice(this.solMint);
 
         try {
             const quoteResponse = await axios.get(jupApiUrl);
@@ -124,9 +124,9 @@ export class SolanaService {
 
             // Effective values considering price impact
             const effectiveTokens = normalizedOutAmount * priceImpactMultiplier; // Adjusted token amount
-            const solUsdPrice = await this.getTokenPrice(this.solMint);
+            const solUsdPrice = await this.getTokenSellPrice(this.solMint);
             const inAmountUsdValue = solAmount * solUsdPrice;
-            const effectiveUsdValue = parseFloat((effectiveTokens * await this.getTokenPrice(outputMint)).toFixed(4)); // Adjusted USD value
+            const effectiveUsdValue = parseFloat((effectiveTokens * await this.getTokenSellPrice(outputMint)).toFixed(4)); // Adjusted USD value
             let solValue = effectiveUsdValue / solUsdPrice;
             if (solValue > solAmount) {
                 solValue = solAmount;
@@ -152,7 +152,7 @@ export class SolanaService {
         }
 
         const jupApiUrl = `https://quote-api.jup.ag/v6/quote?inputMint=${inputMint}&outputMint=${this.solMint}&amount=${tokenAmount}&slippageBps=${slippage}`;
-        const solUsdValue = await this.getTokenPrice(this.solMint);
+        const solUsdValue = await this.getTokenSellPrice(this.solMint);
         const decimals = 6;
 
         try {
