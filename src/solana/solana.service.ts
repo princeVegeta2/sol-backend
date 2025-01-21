@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { Connection, Keypair, VersionedTransaction } from '@solana/web3.js';
 import axios from 'axios';
 
@@ -204,7 +204,7 @@ export class SolanaService {
         }
     }
 
-    async getTokenPrice(mintAddress: string): Promise<any> {
+    async getTokenPrice(mintAddress: string): Promise<number> {
         try {
             const jupApiUrl = `https://api.jup.ag/price/v2?ids=${mintAddress.trim()},So11111111111111111111111111111111111111112`;
             const response = await axios.get(jupApiUrl);
@@ -225,6 +225,44 @@ export class SolanaService {
             throw new Error(`Failed to fetch token price: ${error.message}`);
         }
     }
+
+    async getTokenSellPrice(mintAddress: string): Promise<number> {
+        try {
+            const jupApiUrl = `https://api.jup.ag/price/v2?ids=${mintAddress.trim()},So11111111111111111111111111111111111111112&showExtraInfo=true`;
+            const response = await axios.get(jupApiUrl);
+
+            if (!response.data) {
+                throw new Error('No price data found for the provided mint address');
+            }
+
+            // Go into the data object for the token
+            const tokenData = response.data.data[mintAddress.trim()];
+            if (!tokenData) {
+                throw new Error(`No token data found for ${mintAddress.trim()}`);
+            }
+
+            // The "sellPrice" we want is typically at: `extraInfo.quotedPrice.sellPrice`
+            const sellPriceStr = tokenData?.extraInfo?.quotedPrice?.sellPrice;
+            if (!sellPriceStr) {
+                throw new BadRequestException("The token has no Liquidity and cannot be sold");
+            }
+
+            const sellPriceNum = parseFloat(sellPriceStr);
+            if (isNaN(sellPriceNum)) {
+                throw new Error('Invalid sellPrice data found for the provided mint address');
+            }
+
+            return sellPriceNum;
+        } catch (error) {
+            if (error instanceof BadRequestException) {
+                // Re-throw BadRequestException to be handled by NestJS exception filters
+                throw error;
+            }
+            console.error('Error fetching price:', error.message);
+            throw new Error(`Failed to fetch token price: ${error.message}`);
+        }
+    }
+
 
     private async getTokenMetadata(mintAddress: string): Promise<any> {
         try {

@@ -60,6 +60,11 @@ export class CryptoController {
     return this.solanaService.getTokenPrice(mintAddress);
   }
 
+  @Get('token-sell-price')
+  async getTokenSellPrice(@Query('mintAddress') mintAddress: string) {
+    return this.solanaService.getTokenSellPrice(mintAddress);
+  }
+
   @Get('bulk-token-data')
   async getBulkTokenData(@Body() mintAddresses: string[]) {
     // Call the service to fetch bulk token data

@@ -1,1 +1,0 @@
-1) Add sol_invested and sol_earned columns into stats, calculate their usd value in crypto service and return it

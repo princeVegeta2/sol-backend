@@ -88,7 +88,7 @@ export class CryptoService {
         }
 
         // 9. Compute realized PnL using average cost basis
-        const sellPrice = await this.solanaService.getTokenPrice(createExitDto.mintAddress);
+        const sellPrice = await this.solanaService.getTokenSellPrice(createExitDto.mintAddress);
         if (!sellPrice) {
             throw new BadRequestException('Failed to fetch token price for the minted token');
         }
@@ -140,6 +140,7 @@ export class CryptoService {
         if (!updatedStats) {
             throw new Error('Failed to update user stats');
         }
+        const tokenMetadata = await this.tokenMetadataService.findTokenDataByMintAddress(createExitDto.mintAddress);
         // 14. Return final exit record + updated state (without user fields)
         return {
             exit: {
@@ -179,6 +180,10 @@ export class CryptoService {
                 createdAt: updatedHolding.createdAt,
                 updatedAt: updatedHolding.updatedAt,
             },
+            metadata: {
+                name: tokenMetadata.name,
+                image: tokenMetadata.image
+            },
             newBalance: updatedBalance.balance,
             newBalanceUsd: updatedBalance.balance_usd,
         };
@@ -199,7 +204,7 @@ export class CryptoService {
             throw new BadRequestException('User stats not found');
         }
 
-        const solPrice = await this.solanaService.getTokenPrice(this.solMint);
+        const solPrice = await this.solanaService.getTokenSellPrice(this.solMint);
 
         // 3. Check user SOL balance object
         const balance = await this.solBalanceService.getBalanceDataByUserId(userId, solPrice);
@@ -269,19 +274,25 @@ export class CryptoService {
         // Variables to track whether a holding exists or a token is unique for the user
         let newHolding = false;
         let uniqueUserToken = false;
+        let tokenSellPrice = 0;
         const entries = await this.entryService.findEntriesByUserIdAndMintAddress(userId, createEntryDto.mintAddress);
         if (entries.length === 0) {
             uniqueUserToken = true;
         }
 
         if (!holding) {
-            newHolding = true;
+            // Get the token sell price to create the holding
+            try {
+                tokenSellPrice = await this.solanaService.getTokenSellPrice(createEntryDto.mintAddress);
+            } catch(error) {
+                console.log('No token liquidity or failed to fetch a token sell price');
+            }
             // 9a. Create new holding
             await this.holdingService.createHolding({
                 user,
                 mintAddress: createEntryDto.mintAddress,
                 amount: amountOfTokensReceived,
-                price: localPrice,
+                price: tokenSellPrice,
                 average_price: localPrice,
                 value_usd,
                 value_sol,
@@ -289,7 +300,12 @@ export class CryptoService {
             });
         } else {
             // The user already has a holding for this token
-
+            // Get the token sell price to update the holding
+            try {
+                tokenSellPrice = await this.solanaService.getTokenSellPrice(createEntryDto.mintAddress);
+            } catch(error) {
+                console.log('No token liquidity or failed to fetch a token sell price');
+            }
             // 1. We'll start with the holding's current values as defaults
             let updatedUsdValue = holding.value_usd;
             let updatedSolValue = holding.value_sol;
@@ -333,7 +349,7 @@ export class CryptoService {
             const updatedHolding = await this.holdingService.updateHoldingEntry(
                 holding,
                 amountOfTokensReceived,          // (amount param)
-                localPrice,    // (price param)
+                tokenSellPrice,    // (price param)
                 updatedUsdValue,                 // (newUsdValue)
                 updatedSolValue,                 // (newSolValue)
                 parseFloat(value_usd),           // (additionalUsdValue)
