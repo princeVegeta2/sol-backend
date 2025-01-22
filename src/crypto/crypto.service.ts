@@ -470,7 +470,12 @@ export class CryptoService {
         // Use Promise.all to wait for all async operations
         await Promise.all(
             holdings.map(async (holding) => {
-                const newPrice = await this.solanaService.getTokenSellPrice(holding.mintAddress);
+                let newPrice = 0;
+                try {
+                    const newPrice = await this.solanaService.getTokenSellPrice(holding.mintAddress);
+                } catch(error) {
+                    console.log('The token has no Liquidity or failed to fetch token price');
+                }
                 // Must be called BEFORE price because it uses the old price in the calculation
                 await this.holdingService.updateHoldingPnl(holding, newPrice);
                 // Also updates the value_usd
