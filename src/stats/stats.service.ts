@@ -87,4 +87,17 @@ export class StatService {
 
         return await this.statRepository.save(stat);
     }
+
+    async updateStatOnHoldingDelete(stat: Stat, holdingPnl): Promise<Stat> {
+        const holdingPnlFormatted = parseFloat(holdingPnl.toString());
+        const oldUnrealizedPnl = parseFloat(stat.unrealized_pnl.toString());
+        const oldRealizedPnl = parseFloat(stat.realized_pnl.toString());
+        const newUnrealizedPnl = oldUnrealizedPnl - holdingPnlFormatted;
+        const newTotalPnl = oldRealizedPnl + holdingPnlFormatted;
+
+        stat.unrealized_pnl = newUnrealizedPnl;
+        stat.total_pnl = newTotalPnl;
+
+        return await this.statRepository.save(stat);
+    } 
 }

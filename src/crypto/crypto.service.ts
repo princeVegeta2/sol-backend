@@ -652,9 +652,14 @@ export class CryptoService {
         if (!holding) {
             throw new BadRequestException('Holding not found');
         }
-
+        const userStat = await this.statService.findStatByUserId(userId);
+        if (!userStat) {
+            throw new BadRequestException('User stats not found');
+        }
         // Delete the holding
         await this.holdingService.deleteHolding(holding);
+        // Update user stats
+        await this.statService.updateStatOnHoldingDelete(userStat, holding.pnl);
     }
 
 }
