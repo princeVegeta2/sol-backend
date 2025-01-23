@@ -30,20 +30,17 @@ export class StatService {
         return this.statRepository.findOne({ where: { user: { id: userId } } });
     }
 
-    async updateStatOnEntry(stat: Stat, newHoldingPnl: number, newHolding: boolean, uniqueUserToken: boolean): Promise<Stat> {
+    async updateStatOnEntry(stat: Stat, newHolding: boolean, uniqueUserToken: boolean): Promise<Stat> {
 
-        // Convert stat.total_pnl to a float. Also ensure newHoldingPnl is a float.
-        const currentTotalPnl = parseFloat(stat.total_pnl.toString());
-        const additionalPnl = parseFloat(newHoldingPnl.toString());
-
-        stat.total_pnl = currentTotalPnl + additionalPnl;
+        // increment total_entries
         stat.total_entries += 1;
+
+        // if we discovered user never had that mint => tokens_purchased++
         if (uniqueUserToken) {
             stat.tokens_purchased += 1;
         }
 
-        const currentUnrealized = parseFloat(stat.unrealized_pnl.toString());
-        stat.unrealized_pnl = currentUnrealized + additionalPnl;
+        // if new holding => current_holdings++
         if (newHolding) {
             stat.current_holdings += 1;
         }
@@ -57,22 +54,24 @@ export class StatService {
         exitPnl: number,
         holdingDeleted: boolean
     ): Promise<Stat> {
-        // Calculate winrate
-        const totalExits = stat.total_exits += 1;
-        const userWinrate = parseFloat(((totalWins / totalExits) * 100).toFixed(2));
+        // just handle realized stuff:
+        stat.total_exits += 1;
+        const userWinrate = parseFloat(((totalWins / stat.total_exits) * 100).toFixed(2));
+        stat.winrate = userWinrate;
 
-        const oldTotalPnl = parseFloat(stat.total_pnl.toString());
-        const oldUnrealizedPnl = parseFloat(stat.unrealized_pnl.toString());
-        const newExitPnl = parseFloat(exitPnl.toString());
-        const newUnrealizedPnl = oldUnrealizedPnl - newExitPnl;
-        stat.total_pnl = oldTotalPnl + newExitPnl;
-        stat.unrealized_pnl = newUnrealizedPnl;
-        const oldRealizedPnl = parseFloat(stat.realized_pnl.toString());
-        stat.realized_pnl = oldRealizedPnl + newExitPnl;
+        // add realized
+        const oldRealized = parseFloat(stat.realized_pnl.toString());
+        stat.realized_pnl = oldRealized + exitPnl;
+
+        // add total_pnl
+        const oldTotal = parseFloat(stat.total_pnl.toString());
+        stat.total_pnl = oldTotal + exitPnl; // not subtracting from unrealized
+        // if you want to keep old logic about removing from unrealized, omit it
+        // because we'll recalc with updateHoldingsPrice anyway
+
         if (holdingDeleted) {
             stat.current_holdings -= 1;
         }
-        stat.winrate = userWinrate;
 
         return this.statRepository.save(stat);
     }
@@ -94,10 +93,13 @@ export class StatService {
         const oldRealizedPnl = parseFloat(stat.realized_pnl.toString());
         const newUnrealizedPnl = oldUnrealizedPnl - holdingPnlFormatted;
         const newTotalPnl = oldRealizedPnl + holdingPnlFormatted;
+        const oldTotalHoldings = stat.current_holdings;
+        const newTotalHoldings = oldTotalHoldings - 1;
 
         stat.unrealized_pnl = newUnrealizedPnl;
         stat.total_pnl = newTotalPnl;
+        stat.current_holdings = newTotalHoldings;
 
         return await this.statRepository.save(stat);
-    } 
+    }
 }

@@ -1,0 +1,1 @@
+1) Fix unrealized PNL having a value when no holdings are left

@@ -140,6 +140,8 @@ export class CryptoService {
         if (!updatedStats) {
             throw new Error('Failed to update user stats');
         }
+        await this.updateHoldingsPrice(userId);
+        const reFetchedStat = await this.statService.findStatByUserId(userId);
         const tokenMetadata = await this.tokenMetadataService.findTokenDataByMintAddress(createExitDto.mintAddress);
         // 14. Return final exit record + updated state (without user fields)
         return {
@@ -172,13 +174,13 @@ export class CryptoService {
                 }
                 : null,
             stats: {
-                totalExits: updatedStats.total_exits,
-                currentHoldings: updatedStats.current_holdings,
-                totalPnl: updatedStats.total_pnl,
-                realizedPnl: updatedStats.realized_pnl,
-                winrate: updatedStats.winrate,
-                createdAt: updatedHolding.createdAt,
-                updatedAt: updatedHolding.updatedAt,
+                totalExits: reFetchedStat.total_exits,
+                currentHoldings: reFetchedStat.current_holdings,
+                totalPnl: reFetchedStat.total_pnl,
+                realizedPnl: reFetchedStat.realized_pnl,
+                winrate: reFetchedStat.winrate,
+                createdAt: reFetchedStat.createdAt,
+                updatedAt: reFetchedStat.updatedAt,
             },
             metadata: {
                 name: tokenMetadata.name,
@@ -282,6 +284,8 @@ export class CryptoService {
 
         if (!holding) {
             // Get the token sell price to create the holding
+            // Set new holding to true to add a holding to current_holdings in stats
+            newHolding = true;
             try {
                 tokenSellPrice = await this.solanaService.getTokenSellPrice(createEntryDto.mintAddress);
             } catch(error) {
@@ -371,18 +375,16 @@ export class CryptoService {
             value_sol,
             price: localPrice,
             marketcap,
-            liquidity,
+            liquidity,  
             source: createEntryDto.source,
         });
 
         // 11. Update user's stats
-        const updatedStats = await this.statService.updateStatOnEntry(userStat, pnl, newHolding, uniqueUserToken);
+        const updatedStats = await this.statService.updateStatOnEntry(userStat, newHolding, uniqueUserToken);
         if (!updatedStats) {
             throw new Error('Failed to update user stats');
         }
-        const totalEntries = updatedStats.total_entries;
-        const tokensPurchased = updatedStats.tokens_purchased;
-
+        await this.updateHoldingsPrice(userId);
 
         // 12. Possibly create or retrieve the metadata
         const existingMetadata = await this.tokenMetadataService.findTokenDataByMintAddress(
@@ -459,10 +461,13 @@ export class CryptoService {
             throw new BadRequestException('Failed to update user stats. Please try again');
         }
         const holdings = await this.holdingService.findAllUserHoldingsByUserId(userId);
-        const solPrice = await this.solanaService.getTokenPrice(this.solMint);
         if (!holdings || holdings.length === 0) {
-            throw new BadRequestException('This user has no holdings');
-        }
+            console.log(`User ${userId} has 0 holdings => set unrealizedPnl to 0`);
+            await this.statService.updateStatOnHoldingUpdate(userStat, 0); 
+            return []; // or return an empty array, or some success
+          }
+          
+        const solPrice = await this.solanaService.getTokenPrice(this.solMint);
         if (!solPrice) {
             throw new BadRequestException('Failed to fetch price of SOL. Try again');
         }
@@ -472,7 +477,7 @@ export class CryptoService {
             holdings.map(async (holding) => {
                 let newPrice = 0;
                 try {
-                    const newPrice = await this.solanaService.getTokenSellPrice(holding.mintAddress);
+                    newPrice = await this.solanaService.getTokenSellPrice(holding.mintAddress);
                 } catch(error) {
                     console.log('The token has no Liquidity or failed to fetch token price');
                 }
