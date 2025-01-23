@@ -1,4 +1,4 @@
-import { Controller, Get, Query, BadRequestException, Body, Post, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Query, BadRequestException, Body, Post, Delete, UseGuards, Request } from '@nestjs/common';
 import { SolanaService } from '../solana/solana.service';
 import { CreateEntryDto } from '../entries/entry.dto';
 import { CreateExitDto } from 'src/exits/exit.dto';
@@ -165,5 +165,15 @@ export class CryptoController {
       throw new BadRequestException('User ID not found');
     }
     return this.cryptoService.getAllEntriesAndExitsByUserId(userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('delete-holding')
+  async deleteHolding(@Request() req, @Query('mintAddress') mintAddress: string) {
+    const userId = req.user.userId;
+    if (!userId) {
+      throw new BadRequestException('User ID not found');
+    }
+    return this.cryptoService.deleteAHoldingByUserId(userId, mintAddress);
   }
 }

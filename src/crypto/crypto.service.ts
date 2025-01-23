@@ -646,4 +646,15 @@ export class CryptoService {
         return sanitizedData;
     }
 
+    // Deleting a holding
+    async deleteAHoldingByUserId(userId: number, mintAddress: string) {
+        const holding = await this.holdingService.findHoldingByUserIdAndMintAddress(userId, mintAddress);
+        if (!holding) {
+            throw new BadRequestException('Holding not found');
+        }
+
+        // Delete the holding
+        await this.holdingService.deleteHolding(holding);
+    }
+
 }
