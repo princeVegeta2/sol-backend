@@ -371,6 +371,30 @@ let CryptoService = class CryptoService {
         await this.statService.updateStatOnHoldingUpdate(userStat, newUnrealizedPnl);
         return sanitizedData;
     }
+    async getAllUserHoldings(userId) {
+        const user = await this.userService.findUserById(userId);
+        if (!user) {
+            throw new common_1.BadRequestException('User not found');
+        }
+        const holdings = await this.holdingService.findAllUserHoldingsByUserId(userId);
+        if (!holdings || holdings.length === 0) {
+            return [];
+        }
+        const enrichedData = await Promise.all(holdings.map(async (item) => {
+            const metadata = await this.tokenMetadataService.findTokenDataByMintAddress(item.mintAddress);
+            return {
+                ...item,
+                name: metadata?.name || 'Unknown',
+                ticker: metadata?.ticker || 'Unknown',
+                image: metadata?.image || null,
+                website: metadata?.website || 'N/A',
+                xPage: metadata?.x_page || 'N/A',
+                telegram: metadata?.telegram || 'N/A'
+            };
+        }));
+        const sanitizedData = enrichedData.map(({ id, user, ...rest }) => rest);
+        return sanitizedData;
+    }
     async getBalanceData(userId) {
         const solPrice = await this.solanaService.getTokenSellPrice(this.solMint);
         const balance = await this.solBalanceService.getBalanceDataByUserId(userId, solPrice);

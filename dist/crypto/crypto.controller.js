@@ -133,6 +133,13 @@ let CryptoController = class CryptoController {
         }
         return this.cryptoService.deleteAHoldingByUserId(userId, mintAddress);
     }
+    async getUserHoldings(req) {
+        const userId = req.user.userId;
+        if (!userId) {
+            throw new common_1.BadRequestException('User ID not found');
+        }
+        return this.cryptoService.getAllUserHoldings(userId);
+    }
 };
 exports.CryptoController = CryptoController;
 __decorate([
@@ -264,6 +271,14 @@ __decorate([
     __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", Promise)
 ], CryptoController.prototype, "deleteHolding", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.Get)('user-holdings'),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], CryptoController.prototype, "getUserHoldings", null);
 exports.CryptoController = CryptoController = __decorate([
     (0, common_1.Controller)('crypto'),
     __metadata("design:paramtypes", [solana_service_1.SolanaService,

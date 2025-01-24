@@ -176,4 +176,14 @@ export class CryptoController {
     }
     return this.cryptoService.deleteAHoldingByUserId(userId, mintAddress);
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('user-holdings')
+  async getUserHoldings(@Request() req) {
+    const userId = req.user.userId;
+    if (!userId) {
+      throw new BadRequestException('User ID not found');
+    }
+    return this.cryptoService.getAllUserHoldings(userId);
+  }
 }

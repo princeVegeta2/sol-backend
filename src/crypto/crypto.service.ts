@@ -514,6 +514,38 @@ export class CryptoService {
         return sanitizedData;
     }
 
+    // Get all holdings with no updates(everything is updated in createEntry and createExit)
+    async getAllUserHoldings(userId: number) {
+        const user = await this.userService.findUserById(userId);
+        if (!user) {
+            throw new BadRequestException('User not found');
+        }
+
+        const holdings = await this.holdingService.findAllUserHoldingsByUserId(userId);
+        if (!holdings || holdings.length === 0) {
+            return [];
+        }
+
+        const enrichedData = await Promise.all(
+            holdings.map(async (item) => {
+                // Get metadata
+                const metadata = await this.tokenMetadataService.findTokenDataByMintAddress(item.mintAddress);
+
+                return {
+                    ...item,
+                    name: metadata?.name || 'Unknown',
+                    ticker: metadata?.ticker || 'Unknown', // Default to 'Unknown' if metadata not found
+                    image: metadata?.image || null, // Default to null if image not found
+                    website: metadata?.website || 'N/A',
+                    xPage: metadata?.x_page || 'N/A',
+                    telegram: metadata?.telegram || 'N/A'
+                };
+            })
+        );
+        const sanitizedData = enrichedData.map(({ id, user, ...rest }) => rest);
+        return sanitizedData;
+    }
+
 
     // Get balance data of the user
     async getBalanceData(userId: number) {

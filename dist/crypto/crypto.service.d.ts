@@ -101,6 +101,23 @@ export declare class CryptoService {
         createdAt: Date;
         updatedAt: Date;
     }[]>;
+    getAllUserHoldings(userId: number): Promise<{
+        name: string;
+        ticker: string;
+        image: string;
+        website: string;
+        xPage: string;
+        telegram: string;
+        mintAddress: string;
+        amount: number;
+        price: number;
+        average_price: number;
+        value_usd: number;
+        value_sol: number;
+        pnl: number;
+        createdAt: Date;
+        updatedAt: Date;
+    }[]>;
     getBalanceData(userId: number): Promise<{
         balance: number;
         balanceUsd: number;
