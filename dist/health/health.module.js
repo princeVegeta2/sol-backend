@@ -10,6 +10,7 @@ exports.HealthModule = void 0;
 const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const health_service_1 = require("./health.service");
+const health_controller_1 = require("./health.controller");
 let HealthModule = class HealthModule {
 };
 exports.HealthModule = HealthModule;
@@ -17,6 +18,7 @@ exports.HealthModule = HealthModule = __decorate([
     (0, common_1.Module)({
         imports: [typeorm_1.TypeOrmModule.forFeature([])],
         providers: [health_service_1.HealthService],
+        controllers: [health_controller_1.HealthController],
         exports: [health_service_1.HealthService],
     })
 ], HealthModule);
