@@ -9,6 +9,7 @@ import { TokenMetadataModule } from './metadata/token_metadata.module';
 import { ExitModule } from './exits/exit.module';
 import { SolBalanceModule } from './balance/sol_balance.module';
 import { StatModule } from './stats/stats.module';
+import { HealthModule } from './health/health.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { join } from 'path';
@@ -26,6 +27,7 @@ import { join } from 'path';
     ExitModule,
     SolBalanceModule,
     StatModule,
+    HealthModule,
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
