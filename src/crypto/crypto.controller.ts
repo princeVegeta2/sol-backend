@@ -45,7 +45,7 @@ export class CryptoController {
       throw new BadRequestException('Invalid amount parameter');
     }
 
-    return this.solanaService.getTokenQuoteSolOutput(outputMint, numericAmount, numericSlippage);
+    return this.solanaService.getTokenQuoteSolOutputTest(outputMint, numericAmount, numericSlippage);
   }
 
   @Get('token-data')

@@ -27,14 +27,49 @@ let SolanaService = class SolanaService {
         const jupApiUrl = `https://quote-api.jup.ag/v6/quote?inputMint=${this.solMint}&outputMint=${outputMint}&amount=${lamports}&slippageBps=${slippage}`;
         try {
             const quoteResponse = await axios_1.default.get(jupApiUrl);
-            let tokenDecimals = 9;
-            const mintInfos = quoteResponse.data.mintInfos;
-            if (mintInfos && mintInfos[outputMint] && typeof mintInfos[outputMint].decimals === 'number') {
-                tokenDecimals = mintInfos[outputMint].decimals;
+            const rawData = quoteResponse.data;
+            const outAmountThresholdStr = rawData.otherAmountThreshold;
+            const swapUsdValueStr = rawData.swapUsdValue;
+            if (!outAmountThresholdStr) {
+                throw new Error('No otherAmountThreshold in Jupiter response');
             }
-            const outAmountThresholdLamports = parseFloat(quoteResponse.data.otherAmountThreshold);
-            const normalizedOutAmount = outAmountThresholdLamports / 10 ** tokenDecimals;
-            const priceImpactPct = parseFloat(quoteResponse.data.priceImpactPct) * 100;
+            const outAmountBaseUnits = parseFloat(outAmountThresholdStr);
+            let tokenDecimals = null;
+            const mintInfos = rawData.mintInfos;
+            if (mintInfos && mintInfos[outputMint]) {
+                const possibleDecimals = mintInfos[outputMint].decimals;
+                if (typeof possibleDecimals === 'number') {
+                    tokenDecimals = possibleDecimals;
+                }
+            }
+            if (tokenDecimals == null || tokenDecimals < 0) {
+                if (!swapUsdValueStr) {
+                    tokenDecimals = 9;
+                }
+                else {
+                    const swapUsdValue = parseFloat(swapUsdValueStr);
+                    if (swapUsdValue <= 0) {
+                        tokenDecimals = 9;
+                    }
+                    else {
+                        const tokenSellPrice = outputTokenUsdPrice;
+                        let bestD = 0;
+                        let bestDiff = Number.MAX_VALUE;
+                        for (let d = 0; d <= 12; d++) {
+                            const rawDec = outAmountBaseUnits / 10 ** d;
+                            const approxUsd = rawDec * tokenSellPrice;
+                            const diff = Math.abs(approxUsd - swapUsdValue);
+                            if (diff < bestDiff) {
+                                bestDiff = diff;
+                                bestD = d;
+                            }
+                        }
+                        tokenDecimals = bestD;
+                    }
+                }
+            }
+            const normalizedOutAmount = outAmountBaseUnits / 10 ** tokenDecimals;
+            const priceImpactPct = parseFloat(rawData.priceImpactPct) * 100 || 0;
             const priceImpactMultiplier = 1 - priceImpactPct / 100;
             const effectiveTokens = normalizedOutAmount * priceImpactMultiplier;
             const solUsdPrice = await this.getTokenSellPrice(this.solMint);
@@ -59,54 +94,107 @@ let SolanaService = class SolanaService {
         if (!inputMint || !tokenAmount || tokenAmount < 0.0001) {
             throw new Error('Invalid parameters: inputMint is required, and tokenAmount must be at least 0.0001');
         }
-        const tokenDecimals = 6;
-        const tokenAmountInSmallestUnits = Math.round(tokenAmount * Math.pow(10, tokenDecimals));
-        const jupApiUrl = `https://quote-api.jup.ag/v6/quote?inputMint=${inputMint}&outputMint=${this.solMint}&amount=${tokenAmountInSmallestUnits}&slippageBps=${slippage}`;
-        const solUsdValue = await this.getTokenSellPrice(this.solMint);
-        try {
-            const quoteResponse = await axios_1.default.get(jupApiUrl);
-            const outAmountThreshold = parseFloat(quoteResponse.data.otherAmountThreshold) / Math.pow(10, 9);
-            const outAmountUsdValue = parseFloat((outAmountThreshold * solUsdValue).toFixed(4));
-            return {
-                normalizedThresholdSol: outAmountThreshold.toFixed(6),
-                usdValue: outAmountUsdValue,
-                priceImpactPct: (parseFloat(quoteResponse.data.priceImpactPct) * 100).toFixed(2),
-                slippage: (slippage / 100).toFixed(2) + '%',
-            };
+        const jupApiBase = 'https://quote-api.jup.ag/v6/quote';
+        const tokenSellPrice = await this.getTokenSellPrice(inputMint);
+        const approximateUserUsd = tokenAmount * tokenSellPrice;
+        let bestDecimals = 9;
+        let bestDiff = Number.MAX_VALUE;
+        let bestResponse = null;
+        for (let d = 0; d <= 12; d++) {
+            const amountInBaseUnits = Math.floor(tokenAmount * 10 ** d);
+            if (amountInBaseUnits <= 0)
+                continue;
+            const url = `${jupApiBase}?inputMint=${inputMint}&outputMint=${this.solMint}&amount=${amountInBaseUnits}&slippageBps=${slippage}`;
+            try {
+                const resp = await axios_1.default.get(url);
+                const data = resp.data;
+                const aggregatorSwapUsd = parseFloat(data.swapUsdValue || '0');
+                if (aggregatorSwapUsd > 0) {
+                    const diff = Math.abs(aggregatorSwapUsd - approximateUserUsd);
+                    if (diff < bestDiff) {
+                        bestDiff = diff;
+                        bestDecimals = d;
+                        bestResponse = data;
+                    }
+                }
+                else {
+                }
+            }
+            catch (err) {
+                continue;
+            }
         }
-        catch (error) {
-            console.error('Error fetching token quote:', error.response?.data || error.message);
-            throw new Error('Failed to fetch token quote from Jupiter API');
+        if (!bestResponse) {
+            throw new Error('Failed to find a route that matched any decimals guess 0..12');
         }
+        const raw = bestResponse;
+        const outLamports = parseFloat(raw.otherAmountThreshold || '0');
+        const outSol = outLamports / 1e9;
+        const solUsdPrice = await this.getTokenSellPrice(this.solMint);
+        const outUsd = outSol * solUsdPrice;
+        const priceImpactPct = parseFloat(raw.priceImpactPct) * 100 || 0;
+        return {
+            normalizedThresholdSol: outSol.toFixed(6),
+            usdValue: outUsd.toFixed(4),
+            priceImpactPct: priceImpactPct.toFixed(2),
+            slippage: (slippage / 100).toFixed(2) + '%',
+            guessedDecimals: bestDecimals,
+            raw,
+        };
     }
     async getTokenQuoteSolInputTest(outputMint, solAmount, slippage) {
         if (!outputMint || !solAmount || solAmount < 0.0001) {
             throw new Error('Invalid parameters: outputMint is required, and solAmount must be at least 0.0001 SOL');
         }
-        const tokenDecimals = 6;
         const lamports = Math.round(solAmount * 1e9);
         const jupApiUrl = `https://quote-api.jup.ag/v6/quote?inputMint=${this.solMint}&outputMint=${outputMint}&amount=${lamports}&slippageBps=${slippage}`;
         try {
             const quoteResponse = await axios_1.default.get(jupApiUrl);
-            const outAmountThreshold = parseFloat(quoteResponse.data.otherAmountThreshold) / Math.pow(10, tokenDecimals);
-            const normalizedOutAmount = parseFloat(outAmountThreshold.toFixed(tokenDecimals));
-            const priceImpactPct = parseFloat(quoteResponse.data.priceImpactPct) * 100;
+            const rawData = quoteResponse.data;
+            const outAmountThresholdStr = rawData.otherAmountThreshold;
+            const swapUsdValueStr = rawData.swapUsdValue;
+            if (!outAmountThresholdStr || !swapUsdValueStr) {
+                throw new Error('Jupiter did not return otherAmountThreshold or swapUsdValue.');
+            }
+            const outAmountBaseUnits = parseFloat(outAmountThresholdStr);
+            const swapUsdValue = parseFloat(swapUsdValueStr);
+            if (outAmountBaseUnits <= 0 || swapUsdValue <= 0) {
+                throw new Error('Invalid threshold or swapUsdValue from Jupiter.');
+            }
+            const tokenSellPrice = await this.getTokenSellPrice(outputMint);
+            let bestDecimals = 0;
+            let bestDiff = Number.MAX_VALUE;
+            for (let d = 0; d <= 12; d++) {
+                const outDecimal = outAmountBaseUnits / 10 ** d;
+                const approxUsd = outDecimal * tokenSellPrice;
+                const diff = Math.abs(approxUsd - swapUsdValue);
+                if (diff < bestDiff) {
+                    bestDiff = diff;
+                    bestDecimals = d;
+                }
+            }
+            const rawDecimalOut = outAmountBaseUnits / 10 ** bestDecimals;
+            const priceImpactPct = parseFloat(rawData.priceImpactPct) * 100;
             const priceImpactMultiplier = 1 - priceImpactPct / 100;
-            const effectiveTokens = normalizedOutAmount * priceImpactMultiplier;
+            const effectiveTokens = rawDecimalOut * priceImpactMultiplier;
             const solUsdPrice = await this.getTokenSellPrice(this.solMint);
             const inAmountUsdValue = solAmount * solUsdPrice;
-            const effectiveUsdValue = parseFloat((effectiveTokens * await this.getTokenSellPrice(outputMint)).toFixed(4));
+            const effectiveUsdValue = effectiveTokens * tokenSellPrice;
             let solValue = effectiveUsdValue / solUsdPrice;
             if (solValue > solAmount) {
                 solValue = solAmount;
             }
             return {
-                normalizedThresholdToken: parseFloat(effectiveTokens.toFixed(tokenDecimals)),
-                inAmountUsdValue,
-                usdValue: effectiveUsdValue,
-                solValue,
-                priceImpact: `${priceImpactPct.toFixed(2)}%`,
-                slippage: `${(slippage / 100).toFixed(2)}%`,
+                normalized: {
+                    decimalsGuessed: bestDecimals,
+                    normalizedThresholdToken: parseFloat(effectiveTokens.toFixed(bestDecimals)),
+                    inAmountUsdValue,
+                    usdValue: parseFloat(effectiveUsdValue.toFixed(4)),
+                    solValue: parseFloat(solValue.toFixed(6)),
+                    priceImpact: `${priceImpactPct.toFixed(2)}%`,
+                    slippage: `${(slippage / 100).toFixed(2)}%`,
+                },
+                raw: rawData,
             };
         }
         catch (error) {
@@ -118,17 +206,55 @@ let SolanaService = class SolanaService {
         if (!inputMint || !tokenAmount || tokenAmount < 0.0001) {
             throw new Error('Invalid parameters: inputMint is required, and tokenAmount must be at least 0.0001');
         }
-        const jupApiUrl = `https://quote-api.jup.ag/v6/quote?inputMint=${inputMint}&outputMint=${this.solMint}&amount=${tokenAmount}&slippageBps=${slippage}`;
-        const solUsdValue = await this.getTokenSellPrice(this.solMint);
-        const decimals = 6;
-        try {
-            const quoteResponse = await axios_1.default.get(jupApiUrl);
-            return quoteResponse.data;
+        const jupApiBase = 'https://quote-api.jup.ag/v6/quote';
+        const tokenSellPrice = await this.getTokenSellPrice(inputMint);
+        const approximateUserUsd = tokenAmount * tokenSellPrice;
+        let bestDecimals = 9;
+        let bestDiff = Number.MAX_VALUE;
+        let bestResponse = null;
+        for (let d = 0; d <= 12; d++) {
+            const amountInBaseUnits = Math.floor(tokenAmount * 10 ** d);
+            if (amountInBaseUnits <= 0)
+                continue;
+            const url = `${jupApiBase}?inputMint=${inputMint}&outputMint=${this.solMint}&amount=${amountInBaseUnits}&slippageBps=${slippage}`;
+            try {
+                const resp = await axios_1.default.get(url);
+                const data = resp.data;
+                const aggregatorSwapUsd = parseFloat(data.swapUsdValue || '0');
+                if (aggregatorSwapUsd > 0) {
+                    const diff = Math.abs(aggregatorSwapUsd - approximateUserUsd);
+                    if (diff < bestDiff) {
+                        bestDiff = diff;
+                        bestDecimals = d;
+                        bestResponse = data;
+                    }
+                }
+                else {
+                }
+            }
+            catch (err) {
+            }
         }
-        catch (error) {
-            console.error('Error fetching token quote:', error.response?.data || error.message);
-            throw new Error('Failed to fetch token quote from Jupiter API');
+        if (!bestResponse) {
+            throw new Error('Failed to find a route that matched a decimals guess from 0..12');
         }
+        const raw = bestResponse;
+        const outLamports = parseFloat(raw.otherAmountThreshold || '0');
+        const outSol = outLamports / 1e9;
+        const solUsdPrice = await this.getTokenSellPrice(this.solMint);
+        const outUsd = outSol * solUsdPrice;
+        const priceImpactPct = parseFloat(raw.priceImpactPct) * 100 || 0;
+        return {
+            normalized: {
+                decimalsGuessed: bestDecimals,
+                guaranteedSol: parseFloat(outSol.toFixed(6)),
+                guaranteedUsd: parseFloat(outUsd.toFixed(4)),
+                priceImpactPct: priceImpactPct.toFixed(2),
+                slippage: `${(slippage / 100).toFixed(2)}%`,
+                userUsdApprox: approximateUserUsd,
+            },
+            raw,
+        };
     }
     async getTokenData(mintAddress) {
         try {

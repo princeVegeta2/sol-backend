@@ -43,7 +43,7 @@ let CryptoController = class CryptoController {
         if (isNaN(numericAmount) || numericAmount <= 0) {
             throw new common_1.BadRequestException('Invalid amount parameter');
         }
-        return this.solanaService.getTokenQuoteSolOutput(outputMint, numericAmount, numericSlippage);
+        return this.solanaService.getTokenQuoteSolOutputTest(outputMint, numericAmount, numericSlippage);
     }
     async getTokenData(mintAddress) {
         return this.solanaService.getTokenData(mintAddress);
