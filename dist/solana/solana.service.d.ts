@@ -2,7 +2,7 @@ export declare class SolanaService {
     private readonly connection;
     private readonly solMint;
     constructor();
-    getTokenQuoteSolInput(outputMint: string, solAmount: number, slippage: number, price: number): Promise<any>;
+    getTokenQuoteSolInput(outputMint: string, solAmount: number, slippage: number, outputTokenUsdPrice: number): Promise<any>;
     getTokenQuoteSolOutput(inputMint: string, tokenAmount: number, slippage: number): Promise<any>;
     getTokenQuoteSolInputTest(outputMint: string, solAmount: number, slippage: number): Promise<any>;
     getTokenQuoteSolOutputTest(inputMint: string, tokenAmount: number, slippage: number): Promise<any>;

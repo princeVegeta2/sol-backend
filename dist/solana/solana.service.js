@@ -19,7 +19,7 @@ let SolanaService = class SolanaService {
         const rpcUrl = process.env.QUICKNODE_RPC_URL;
         this.connection = new web3_js_1.Connection(rpcUrl, 'confirmed');
     }
-    async getTokenQuoteSolInput(outputMint, solAmount, slippage, price) {
+    async getTokenQuoteSolInput(outputMint, solAmount, slippage, outputTokenUsdPrice) {
         if (!outputMint || !solAmount || solAmount < 0.0001) {
             throw new Error('Invalid parameters...');
         }
@@ -27,15 +27,19 @@ let SolanaService = class SolanaService {
         const jupApiUrl = `https://quote-api.jup.ag/v6/quote?inputMint=${this.solMint}&outputMint=${outputMint}&amount=${lamports}&slippageBps=${slippage}`;
         try {
             const quoteResponse = await axios_1.default.get(jupApiUrl);
-            const tokenDecimals = 6;
+            let tokenDecimals = 9;
+            const mintInfos = quoteResponse.data.mintInfos;
+            if (mintInfos && mintInfos[outputMint] && typeof mintInfos[outputMint].decimals === 'number') {
+                tokenDecimals = mintInfos[outputMint].decimals;
+            }
             const outAmountThresholdLamports = parseFloat(quoteResponse.data.otherAmountThreshold);
             const normalizedOutAmount = outAmountThresholdLamports / 10 ** tokenDecimals;
             const priceImpactPct = parseFloat(quoteResponse.data.priceImpactPct) * 100;
-            const priceImpactMultiplier = 1 - (priceImpactPct / 100);
+            const priceImpactMultiplier = 1 - priceImpactPct / 100;
             const effectiveTokens = normalizedOutAmount * priceImpactMultiplier;
             const solUsdPrice = await this.getTokenSellPrice(this.solMint);
             const inAmountUsdValue = solAmount * solUsdPrice;
-            const effectiveUsdValue = effectiveTokens * price;
+            const effectiveUsdValue = effectiveTokens * outputTokenUsdPrice;
             const solValue = effectiveUsdValue / solUsdPrice;
             return {
                 normalizedThresholdToken: parseFloat(effectiveTokens.toFixed(tokenDecimals)),

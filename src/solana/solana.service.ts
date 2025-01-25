@@ -13,48 +13,74 @@ export class SolanaService {
         this.connection = new Connection(rpcUrl, 'confirmed');
     }
 
-    // Minimum SOL: 0.0001
     async getTokenQuoteSolInput(
         outputMint: string,
-        solAmount: number,
-        slippage: number,
-        price: number
+        solAmount: number,   // The user’s SOL amount in decimal form, e.g. 0.3904
+        slippage: number,    // Slippage in BPS, e.g. 50 = 0.5%
+        outputTokenUsdPrice: number, // The USD price for the output token
     ): Promise<any> {
         if (!outputMint || !solAmount || solAmount < 0.0001) {
             throw new Error('Invalid parameters...');
         }
+
+        // 1. Convert the decimal SOL amount to lamports (1 SOL = 1e9 lamports)
         const lamports = Math.round(solAmount * 1e9);
 
+        // 2. Build the Jupiter quote URL
+        //    Here, 'this.solMint' is presumably the "So1111...1112" (native SOL) mint.
         const jupApiUrl = `https://quote-api.jup.ag/v6/quote?inputMint=${this.solMint}&outputMint=${outputMint}&amount=${lamports}&slippageBps=${slippage}`;
 
         try {
+            // 3. Fetch the quote from Jupiter
             const quoteResponse = await axios.get(jupApiUrl);
-            const tokenDecimals = 6; // or fetch from chain for outputMint
 
+            // 4. Figure out how many decimals the OUTPUT token actually has
+            //    - If Jupiter’s response includes "mintInfos[outputMint]"
+            //    - If not, you may need to fetch from chain or have a fallback
+            let tokenDecimals = 9; // default to 9 if not found
+            const mintInfos = quoteResponse.data.mintInfos;
+            if (mintInfos && mintInfos[outputMint] && typeof mintInfos[outputMint].decimals === 'number') {
+                tokenDecimals = mintInfos[outputMint].decimals;
+            }
+
+            // 5. Jupiter gives "otherAmountThreshold" in *base units* of the output token.
+            //    We must divide by 10^tokenDecimals to get the decimal amount
             const outAmountThresholdLamports = parseFloat(quoteResponse.data.otherAmountThreshold);
             const normalizedOutAmount = outAmountThresholdLamports / 10 ** tokenDecimals;
 
-            // Price impact
+            // 6. Price impact
             const priceImpactPct = parseFloat(quoteResponse.data.priceImpactPct) * 100;
-            const priceImpactMultiplier = 1 - (priceImpactPct / 100);
+            const priceImpactMultiplier = 1 - priceImpactPct / 100;
 
-            // Adjust for price impact
+            // 7. Adjust final token amount for price impact
             const effectiveTokens = normalizedOutAmount * priceImpactMultiplier;
 
-            // Use the same 'price' for in and out
+            // 8. Convert SOL input to USD
+            //    (Assuming getTokenSellPrice(this.solMint) gives you the *current* SOL→USD price)
             const solUsdPrice = await this.getTokenSellPrice(this.solMint);
             const inAmountUsdValue = solAmount * solUsdPrice;
-            // final usd = effective tokens * the same price
-            const effectiveUsdValue = effectiveTokens * price;
 
-            // computed solValue purely from finalUsdValue / current solUsd
+            // 9. Now figure out the *final* USD value of the tokens you receive
+            //    "outputTokenUsdPrice" is presumably the per-token USD price for outputMint
+            const effectiveUsdValue = effectiveTokens * outputTokenUsdPrice;
+
+            // 10. Also compute that final USD in terms of SOL
             const solValue = effectiveUsdValue / solUsdPrice;
 
+            // Return the same structure you used before
             return {
+                // number of tokens you’d actually receive after price impact
                 normalizedThresholdToken: parseFloat(effectiveTokens.toFixed(tokenDecimals)),
+
+                // How many USD you *spent* in SOL
                 inAmountUsdValue,
+
+                // The final USD value of the tokens you get
                 usdValue: effectiveUsdValue,
+
+                // The final SOL value if you measure that final USD in SOL
                 solValue,
+
                 priceImpact: `${priceImpactPct.toFixed(2)}%`,
                 slippage: `${(slippage / 100).toFixed(2)}%`,
             };
