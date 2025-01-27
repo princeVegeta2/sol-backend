@@ -481,6 +481,23 @@ let CryptoService = class CryptoService {
         await this.holdingService.deleteHolding(holding);
         await this.statService.updateStatOnHoldingDelete(userStat, holding.pnl);
     }
+    async calculateNetworth(userId) {
+        const { holdingsSolValue, holdingsUsdValue } = await this.holdingService.calculateHoldingsValueByUserId(userId);
+        const solPrice = await this.solanaService.getTokenSellPrice(this.solMint);
+        const balanceData = await this.solBalanceService.getBalanceDataByUserId(userId, solPrice);
+        const solBalance = typeof balanceData.balance === 'string' ? parseFloat(balanceData.balance) : balanceData.balance;
+        const usdBalance = typeof balanceData.balance_usd === 'string' ? parseFloat(balanceData.balance_usd) : balanceData.balance_usd;
+        const roundedSolBalance = parseFloat(solBalance.toFixed(4));
+        const roundedUsdBalance = parseFloat(usdBalance.toFixed(4));
+        const totalNetworthSol = holdingsSolValue + roundedSolBalance;
+        const totalNetworthUsd = holdingsUsdValue + roundedUsdBalance;
+        const roundedNetworthSol = parseFloat(totalNetworthSol.toFixed(4));
+        const roundedNetworthUsd = parseFloat(totalNetworthUsd.toFixed(4));
+        return ({
+            solNetworth: roundedNetworthSol,
+            usdNetworth: roundedNetworthUsd
+        });
+    }
 };
 exports.CryptoService = CryptoService;
 exports.CryptoService = CryptoService = __decorate([

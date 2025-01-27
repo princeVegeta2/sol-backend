@@ -166,4 +166,8 @@ export declare class CryptoController {
         createdAt: Date;
         updatedAt: Date;
     }[]>;
+    getUserNetworth(req: any): Promise<{
+        solNetworth: number;
+        usdNetworth: number;
+    }>;
 }

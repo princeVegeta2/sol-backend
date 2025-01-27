@@ -111,6 +111,23 @@ let HoldingService = class HoldingService {
             .where('holding.user_id = :userId', { userId })
             .getMany();
     }
+    async calculateHoldingsValueByUserId(userId) {
+        const holdings = await this.findAllUserHoldingsByUserId(userId);
+        const holdingsSolValue = holdings.reduce((acc, holding) => {
+            const val = typeof holding.value_sol === 'string'
+                ? parseFloat(holding.value_sol) : holding.value_sol;
+            return acc + val;
+        }, 0);
+        const holdingsUsdValue = holdings.reduce((acc, holding) => {
+            const val = typeof holding.value_usd === 'string'
+                ? parseFloat(holding.value_usd) : holding.value_usd;
+            return acc + val;
+        }, 0);
+        return ({
+            holdingsSolValue,
+            holdingsUsdValue
+        });
+    }
 };
 exports.HoldingService = HoldingService;
 exports.HoldingService = HoldingService = __decorate([

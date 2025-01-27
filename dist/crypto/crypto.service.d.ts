@@ -170,4 +170,8 @@ export declare class CryptoService {
         updatedAt: Date;
     })[]>;
     deleteAHoldingByUserId(userId: number, mintAddress: string): Promise<void>;
+    calculateNetworth(userId: number): Promise<{
+        solNetworth: number;
+        usdNetworth: number;
+    }>;
 }

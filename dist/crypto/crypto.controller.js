@@ -140,6 +140,14 @@ let CryptoController = class CryptoController {
         }
         return this.cryptoService.getAllUserHoldings(userId);
     }
+    async getUserNetworth(req) {
+        const userId = req.user.userId;
+        if (!userId) {
+            throw new common_1.BadRequestException('User ID not found');
+        }
+        await this.cryptoService.updateHoldingsPrice(userId);
+        return this.cryptoService.calculateNetworth(userId);
+    }
 };
 exports.CryptoController = CryptoController;
 __decorate([
@@ -279,6 +287,14 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], CryptoController.prototype, "getUserHoldings", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.Get)('user-networth'),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], CryptoController.prototype, "getUserNetworth", null);
 exports.CryptoController = CryptoController = __decorate([
     (0, common_1.Controller)('crypto'),
     __metadata("design:paramtypes", [solana_service_1.SolanaService,

@@ -186,4 +186,16 @@ export class CryptoController {
     }
     return this.cryptoService.getAllUserHoldings(userId);
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('user-networth')
+  async getUserNetworth(@Request() req) {
+    const userId = req.user.userId;
+    if (!userId) {
+      throw new BadRequestException('User ID not found');
+    }
+    // Also update holdings
+    await this.cryptoService.updateHoldingsPrice(userId);
+    return this.cryptoService.calculateNetworth(userId);
+  }
 }
