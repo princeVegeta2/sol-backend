@@ -212,16 +212,21 @@ export class SolBalanceService {
         // Convert to float
         const oldSol = parseFloat(balance.balance.toString());
         const oldUsd = parseFloat(balance.balance_usd.toString());
+        console.log(`Converting to float: ${oldSol}, ${oldUsd}`);
 
         const addSol = parseFloat(amount.toString());
         const addUsd = parseFloat(usdValue.toString());
+        console.log(`Converting to float(added sol and usd) ${addSol}, ${addUsd}`);
 
         const newSolBal = oldSol + addSol;   // numeric sum
         const newUsdBal = oldUsd + addUsd;   // numeric sum
+        console.log(`Summing oldSol + addSol and oldUsd + addUsd: ${newSolBal}, ${newUsdBal}`);
 
         // Round as needed
         const roundedSolBal = parseFloat(newSolBal.toFixed(4));
         const roundedUsdBal = parseFloat(newUsdBal.toFixed(4));
+        console.log(`Rounding to 4 decimals: ${roundedSolBal}, ${roundedUsdBal}`);
+
 
         balance.balance = roundedSolBal;
         balance.balance_usd = roundedUsdBal;

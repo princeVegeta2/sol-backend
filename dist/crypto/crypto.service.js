@@ -32,33 +32,43 @@ let CryptoService = class CryptoService {
         this.solMint = 'So11111111111111111111111111111111111111112';
     }
     async createExit(userId, createExitDto) {
+        console.log(`Validating the user. ID ${userId}`);
         const user = await this.userService.findUserById(userId);
         if (!user) {
             throw new common_1.BadRequestException('User not found');
         }
+        console.log(`Finding the user stats`);
         const userStat = await this.statService.findStatByUserId(userId);
         if (!userStat) {
             throw new common_1.BadRequestException('User stats not found');
         }
         const solPrice = await this.solanaService.getTokenPrice(this.solMint);
+        console.log(`Sol proce: ${solPrice}`);
+        console.log(`Fetching balance`);
         const balance = await this.solBalanceService.getBalanceDataByUserId(userId, solPrice);
         if (!balance) {
             throw new common_1.BadRequestException('User balance not found');
         }
+        console.log("Fetching the token quote");
         const tokenQuote = await this.solanaService.getTokenQuoteSolOutput(createExitDto.mintAddress, createExitDto.amount, createExitDto.slippage);
         if (!tokenQuote) {
             throw new common_1.BadRequestException('Failed to fetch token quote');
         }
         const solReceived = parseFloat(tokenQuote.normalizedThresholdSol);
         const solUsdValue = tokenQuote.usdValue;
+        console.log(`Sol received: ${solReceived}, solUsdValue: ${solUsdValue}`);
+        console.log(`Updating balance with the new values`);
         const updatedBalance = await this.solBalanceService.updateBalanceAdd(balance, solReceived, solUsdValue);
         if (!updatedBalance) {
             throw new common_1.BadRequestException('Failed to update user balance');
         }
+        console.log(`Updated balance SOL: ${updatedBalance.balance}, USD: ${updatedBalance.balance_usd}`);
+        console.log("Fetching token data");
         const tokenData = await this.solanaService.getTokenData(createExitDto.mintAddress);
         if (!tokenData) {
             throw new common_1.BadRequestException('Token not found');
         }
+        console.log("Fetching the holding");
         const holding = await this.holdingService.findHoldingByUserIdAndMintAddress(userId, createExitDto.mintAddress);
         if (!holding) {
             throw new common_1.BadRequestException('No existing holding found for this token. Cannot exit a position that does not exist.');
@@ -70,9 +80,12 @@ let CryptoService = class CryptoService {
         if (!sellPrice) {
             throw new common_1.BadRequestException('Failed to fetch token price for the minted token');
         }
+        console.log(`The sell price of the token: ${sellPrice}`);
         const currentAveragePrice = parseFloat(holding.average_price.toString()) || 0;
         const tokensSold = parseFloat(createExitDto.amount.toString());
         const realizedPnl = (sellPrice - currentAveragePrice) * tokensSold;
+        console.log(`currentAveragePrice: ${currentAveragePrice}, tokensSold: ${tokensSold}, realizedPnl: ${realizedPnl}`);
+        console.log("Creating an exit record");
         const exitRecord = await this.exitService.createExit({
             user,
             mintAddress: createExitDto.mintAddress,
@@ -84,6 +97,7 @@ let CryptoService = class CryptoService {
             liquidity: tokenData.liquidity.usd,
             pnl: parseFloat(realizedPnl.toFixed(4)),
         });
+        console.log("Updating the holding");
         const updatedHolding = await this.holdingService.updateHoldingExit(holding, tokensSold, holding.value_usd, holding.value_sol, solUsdValue, solReceived);
         if (!updatedHolding) {
             throw new common_1.BadRequestException('Failed to update holding on exit');
@@ -91,8 +105,10 @@ let CryptoService = class CryptoService {
         let deletedHolding = false;
         if (updatedHolding.amount <= 0.0000001) {
             await this.holdingService.deleteHolding(updatedHolding);
+            console.log("Holding deleted");
             deletedHolding = true;
         }
+        console.log("Updating user stats");
         const totalWins = (await this.exitService.findAllExitWinsByUserId(userId)).length;
         const updatedStats = await this.statService.updateStatOnExit(userStat, totalWins, parseFloat(realizedPnl.toFixed(4)), deletedHolding);
         if (!updatedStats) {
@@ -101,6 +117,8 @@ let CryptoService = class CryptoService {
         await this.updateHoldingsPrice(userId);
         const reFetchedStat = await this.statService.findStatByUserId(userId);
         const tokenMetadata = await this.tokenMetadataService.findTokenDataByMintAddress(createExitDto.mintAddress);
+        console.log(`Updated stats: ${reFetchedStat.realized_pnl}, ${reFetchedStat.total_pnl}`);
+        console.log("Finalizing");
         return {
             exit: {
                 id: exitRecord.id,
@@ -147,10 +165,12 @@ let CryptoService = class CryptoService {
         };
     }
     async createEntry(userId, createEntryDto) {
+        console.log(`Validating user with ID ${userId}`);
         const user = await this.userService.findUserById(userId);
         if (!user) {
             throw new common_1.BadRequestException('User not found');
         }
+        console.log(`User: ${user.email}`);
         const userStat = await this.statService.findStatByUserId(userId);
         if (!userStat) {
             throw new common_1.BadRequestException('User stats not found');
@@ -210,7 +230,7 @@ let CryptoService = class CryptoService {
                 mintAddress: createEntryDto.mintAddress,
                 amount: amountOfTokensReceived,
                 price: tokenSellPrice,
-                average_price: localPrice,
+                average_price: tokenSellPrice,
                 value_usd,
                 value_sol,
                 pnl,

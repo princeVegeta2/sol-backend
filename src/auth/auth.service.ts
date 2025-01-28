@@ -36,6 +36,7 @@ export class AuthService {
    */
   async login(user: { id: number; email: string; }, staySignedIn: boolean) {
     const payload = { sub: user.id, email: user.email }; // 'sub' is short for 'subject' (user ID)
+    console.log(`Payload: ID: ${payload.sub}, email: ${payload.email}`);
     const options = {
       expiresIn: staySignedIn ? '30d' : '24h',
     };

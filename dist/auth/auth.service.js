@@ -32,6 +32,7 @@ let AuthService = class AuthService {
     }
     async login(user, staySignedIn) {
         const payload = { sub: user.id, email: user.email };
+        console.log(`Payload: ID: ${payload.sub}, email: ${payload.email}`);
         const options = {
             expiresIn: staySignedIn ? '30d' : '24h',
         };
