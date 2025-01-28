@@ -46,5 +46,4 @@ export class EntryService {
         return result;
     }
 
-
 }

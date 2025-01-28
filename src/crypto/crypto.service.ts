@@ -130,8 +130,7 @@ export class CryptoService {
         if (updatedHolding.amount <= 0.0000001) {
             // or just `updatedHolding.amount === 0` if you store exact zero
             await this.holdingService.deleteHolding(updatedHolding);
-            // If you want, set updatedHolding to null so it won't appear in the response
-            // updatedHolding = null;
+    
             deletedHolding = true;
         }
         // 13. Update user's stats
@@ -297,7 +296,7 @@ export class CryptoService {
                 mintAddress: createEntryDto.mintAddress,
                 amount: amountOfTokensReceived,
                 price: tokenSellPrice,
-                average_price: localPrice,
+                average_price: tokenSellPrice,
                 value_usd,
                 value_sol,
                 pnl,
