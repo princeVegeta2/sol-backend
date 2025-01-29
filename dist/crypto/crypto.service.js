@@ -185,14 +185,14 @@ let CryptoService = class CryptoService {
             throw new common_1.BadRequestException('Insufficient SOL balance');
         }
         let localPrice = await this.solanaService.getTokenPrice(createEntryDto.mintAddress);
-        if (!localPrice) {
+        if (!localPrice || localPrice <= 0) {
             for (let i = 1; i < 6; i++) {
                 localPrice = await this.solanaService.getTokenPrice(createEntryDto.mintAddress);
-                if (localPrice)
+                if (localPrice > 0)
                     break;
             }
         }
-        if (!localPrice) {
+        if (!localPrice || localPrice <= 0) {
             throw new common_1.BadRequestException("Failed to fetch token price");
         }
         const tokenQuote = await this.solanaService.getTokenQuoteSolInput(createEntryDto.mintAddress, createEntryDto.amount, createEntryDto.slippage, localPrice);
