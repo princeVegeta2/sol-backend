@@ -106,6 +106,9 @@ export class SolanaService {
             // 9. Now figure out the *final* USD value of the tokens you receive
             //    outputTokenUsdPrice is presumably "USD per token" for the output mint
             const effectiveUsdValue = effectiveTokens * outputTokenUsdPrice;
+            if (effectiveUsdValue <= 0) {
+                throw new BadRequestException("Failed to place a quote. Token USD value failed to calculate");
+            }
 
             // 10. Also compute that final USD in terms of SOL
             const solValue = effectiveUsdValue / solUsdPrice;
