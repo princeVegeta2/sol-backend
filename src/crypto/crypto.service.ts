@@ -238,7 +238,18 @@ export class CryptoService {
         // 4. Prepare data for the quote
         //    - get the price from DexScreener or wherever
         //    - get the token quote from Jupiter
-        const localPrice = await this.solanaService.getTokenPrice(createEntryDto.mintAddress);
+        let localPrice = await this.solanaService.getTokenPrice(createEntryDto.mintAddress);
+        if (!localPrice) {
+            // Try again
+            for(let i = 1; i < 6; i++) {
+                localPrice = await this.solanaService.getTokenPrice(createEntryDto.mintAddress);
+                if (localPrice) break;
+            }
+        }
+        // Check again
+        if (!localPrice) {
+            throw new BadRequestException("Failed to fetch token price");
+        }
         const tokenQuote = await this.solanaService.getTokenQuoteSolInput(
             createEntryDto.mintAddress,
             createEntryDto.amount,
