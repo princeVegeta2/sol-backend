@@ -491,7 +491,7 @@ export class CryptoService {
         // Use Promise.all to wait for all async operations
         await Promise.all(
             holdings.map(async (holding) => {
-                let newPrice = 0;
+                let newPrice = holding.price;
                 try {
                     newPrice = await this.solanaService.getTokenSellPrice(holding.mintAddress);
                 } catch(error) {
