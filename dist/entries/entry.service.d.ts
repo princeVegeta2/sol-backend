@@ -17,4 +17,7 @@ export declare class EntryService {
     }): Promise<Entry>;
     findEntriesByUserIdAndMintAddress(userId: number, mintAddress: string): Promise<Entry[]>;
     findAllEntriesByUserId(userId: number): Promise<Entry[]>;
+    findAllEntries(): Promise<Entry[]>;
+    findAllEntriesByMintAddress(mintAddress: string): Promise<Entry[]>;
+    deleteEntry(entry: Entry): Promise<void>;
 }

@@ -111,6 +111,12 @@ let HoldingService = class HoldingService {
             .where('holding.user_id = :userId', { userId })
             .getMany();
     }
+    async findAllHoldingsByMintAddress(mintAddress) {
+        return this.holdingRepository
+            .createQueryBuilder('holding')
+            .where('holding.mint_address = :mintAddress', { mintAddress })
+            .getMany();
+    }
     async calculateHoldingsValueByUserId(userId) {
         const holdings = await this.findAllUserHoldingsByUserId(userId);
         const holdingsSolValue = holdings.reduce((acc, holding) => {
@@ -127,6 +133,9 @@ let HoldingService = class HoldingService {
             holdingsSolValue,
             holdingsUsdValue
         });
+    }
+    async findAllHoldings() {
+        return this.holdingRepository.find();
     }
 };
 exports.HoldingService = HoldingService;

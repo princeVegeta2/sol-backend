@@ -43,6 +43,21 @@ let EntryService = class EntryService {
         const result = await this.entryRepository.query(query, [userId]);
         return result;
     }
+    async findAllEntries() {
+        return this.entryRepository.find();
+    }
+    async findAllEntriesByMintAddress(mintAddress) {
+        const query = `
+            SELECT *
+            FROM entries
+            WHERE mint_address = $1
+        `;
+        const result = await this.entryRepository.query(query, [mintAddress]);
+        return result;
+    }
+    async deleteEntry(entry) {
+        await this.entryRepository.remove(entry);
+    }
 };
 exports.EntryService = EntryService;
 exports.EntryService = EntryService = __decorate([

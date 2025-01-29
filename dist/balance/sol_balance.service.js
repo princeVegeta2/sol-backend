@@ -175,6 +175,15 @@ let SolBalanceService = class SolBalanceService {
         balance.total_usd_redeemed = newUsdTotalRedeemed;
         return this.solBalanceRepository.save(balance);
     }
+    async findAllBalances() {
+        return this.solBalanceRepository.find();
+    }
+    async findBalanceByUserId(userId) {
+        return this.solBalanceRepository.findOne({ where: { user: { id: userId } } });
+    }
+    async deleteBalance(solBalance) {
+        await this.solBalanceRepository.remove(solBalance);
+    }
 };
 exports.SolBalanceService = SolBalanceService;
 exports.SolBalanceService = SolBalanceService = __decorate([

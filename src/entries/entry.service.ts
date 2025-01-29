@@ -46,4 +46,21 @@ export class EntryService {
         return result;
     }
 
+    async findAllEntries(): Promise<Entry[]> {
+        return this.entryRepository.find();
+    }
+
+    async findAllEntriesByMintAddress(mintAddress: string): Promise<Entry[]> {
+        const query = `
+            SELECT *
+            FROM entries
+            WHERE mint_address = $1
+        `;
+        const result = await this.entryRepository.query(query, [mintAddress]);
+        return result;
+    }
+
+    async deleteEntry(entry: Entry): Promise<void> {
+        await this.entryRepository.remove(entry);
+    }
 }

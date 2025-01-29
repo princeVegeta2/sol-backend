@@ -246,4 +246,15 @@ export class SolBalanceService {
         return this.solBalanceRepository.save(balance);
     }
 
+    async findAllBalances(): Promise<SolBalance[]> {
+        return this.solBalanceRepository.find();
+    }
+
+    async findBalanceByUserId(userId: number): Promise<SolBalance> {
+        return this.solBalanceRepository.findOne({ where: { user: { id: userId } } });
+    }
+
+    async deleteBalance(solBalance: SolBalance): Promise<void> {
+        await this.solBalanceRepository.remove(solBalance);
+    }
 }

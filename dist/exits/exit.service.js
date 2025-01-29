@@ -34,6 +34,16 @@ let ExitService = class ExitService {
         const result = await this.exitRepository.query(query, [userId]);
         return result;
     }
+    async findExitsByUserIdAndMintAddress(userId, mintAddress) {
+        const query = `
+        SELECT *
+        FROM exits
+        WHERE user_id = $1
+            AND mint_address = $2
+        `;
+        const result = await this.exitRepository.query(query, [userId, mintAddress]);
+        return result;
+    }
     async findAllExitWinsByUserId(userId) {
         const query = `
         SELECT *
@@ -43,6 +53,21 @@ let ExitService = class ExitService {
         `;
         const result = await this.exitRepository.query(query, [userId]);
         return result;
+    }
+    async findAllExitsByMintAddress(mintAddress) {
+        const query = `
+        SELECT *
+        FROM exits
+        WHERE mint_address = $1
+        `;
+        const result = await this.exitRepository.query(query, [mintAddress]);
+        return result;
+    }
+    async findAllExits() {
+        return this.exitRepository.find();
+    }
+    async deleteExit(exit) {
+        await this.exitRepository.remove(exit);
     }
 };
 exports.ExitService = ExitService;

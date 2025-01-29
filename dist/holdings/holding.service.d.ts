@@ -23,8 +23,10 @@ export declare class HoldingService {
     updateHoldingPrice(holding: Holding, price: number, solPrice: number): Promise<Holding>;
     deleteHolding(holding: Holding): Promise<void>;
     findAllUserHoldingsByUserId(userId: number): Promise<Holding[]>;
+    findAllHoldingsByMintAddress(mintAddress: string): Promise<Holding[]>;
     calculateHoldingsValueByUserId(userId: number): Promise<{
         holdingsSolValue: number;
         holdingsUsdValue: number;
     }>;
+    findAllHoldings(): Promise<Holding[]>;
 }

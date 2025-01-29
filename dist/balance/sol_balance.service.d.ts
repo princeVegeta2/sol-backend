@@ -23,4 +23,7 @@ export declare class SolBalanceService {
     updateBalanceSubtract(balance: SolBalance, amount: number, solPrice: number): Promise<SolBalance>;
     updateBalanceAdd(balance: SolBalance, amount: number | string, usdValue: number | string): Promise<SolBalance>;
     updateUsdBalance(balance: SolBalance, solPrice: number): Promise<SolBalance>;
+    findAllBalances(): Promise<SolBalance[]>;
+    findBalanceByUserId(userId: number): Promise<SolBalance>;
+    deleteBalance(solBalance: SolBalance): Promise<void>;
 }

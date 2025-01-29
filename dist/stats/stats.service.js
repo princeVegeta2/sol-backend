@@ -59,6 +59,16 @@ let StatService = class StatService {
         stat.total_pnl = newTotalPnl;
         return await this.statRepository.save(stat);
     }
+    async reduceStatRealizedPnl(stat, reduceBy) {
+        const reduceByFormatted = parseFloat(reduceBy.toString());
+        const oldRealizedPnl = parseFloat(stat.realized_pnl.toString());
+        const oldUnrealizedPnl = parseFloat(stat.unrealized_pnl.toString());
+        const newRealizedPnl = oldRealizedPnl - reduceByFormatted;
+        const newTotalPnl = oldUnrealizedPnl + newRealizedPnl;
+        stat.realized_pnl = newRealizedPnl;
+        stat.total_pnl = newRealizedPnl;
+        return await this.statRepository.save(stat);
+    }
     async updateStatOnHoldingDelete(stat, holdingPnl) {
         const holdingPnlFormatted = parseFloat(holdingPnl.toString());
         const oldUnrealizedPnl = parseFloat(stat.unrealized_pnl.toString());
@@ -71,6 +81,12 @@ let StatService = class StatService {
         stat.total_pnl = newTotalPnl;
         stat.current_holdings = newTotalHoldings;
         return await this.statRepository.save(stat);
+    }
+    async findAllStats() {
+        return this.statRepository.find();
+    }
+    async deleteStat(stat) {
+        await this.statRepository.remove(stat);
     }
 };
 exports.StatService = StatService;

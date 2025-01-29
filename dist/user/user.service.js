@@ -52,6 +52,9 @@ let UserService = class UserService {
         }
         return null;
     }
+    async findAllUsers() {
+        return this.userRepository.find();
+    }
 };
 exports.UserService = UserService;
 exports.UserService = UserService = __decorate([

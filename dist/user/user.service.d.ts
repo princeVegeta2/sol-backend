@@ -9,4 +9,5 @@ export declare class UserService {
     userUsernameExists(username: string): Promise<boolean>;
     findUserById(id: number): Promise<User | undefined>;
     validateUser(email: string, password: string): Promise<User | null>;
+    findAllUsers(): Promise<User[]>;
 }

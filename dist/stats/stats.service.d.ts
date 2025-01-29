@@ -19,5 +19,8 @@ export declare class StatService {
     updateStatOnEntry(stat: Stat, newHolding: boolean, uniqueUserToken: boolean): Promise<Stat>;
     updateStatOnExit(stat: Stat, totalWins: number, exitPnl: number, holdingDeleted: boolean): Promise<Stat>;
     updateStatOnHoldingUpdate(stat: Stat, newUnrealizedPnl: number): Promise<Stat>;
+    reduceStatRealizedPnl(stat: Stat, reduceBy: number): Promise<Stat>;
     updateStatOnHoldingDelete(stat: Stat, holdingPnl: any): Promise<Stat>;
+    findAllStats(): Promise<Stat[]>;
+    deleteStat(stat: Stat): Promise<void>;
 }

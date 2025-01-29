@@ -16,5 +16,9 @@ export declare class ExitService {
         pnl: number;
     }): Promise<Exit>;
     findExitsByUserId(userId: number): Promise<Exit[]>;
+    findExitsByUserIdAndMintAddress(userId: number, mintAddress: string): Promise<Exit[]>;
     findAllExitWinsByUserId(userId: number): Promise<Exit[]>;
+    findAllExitsByMintAddress(mintAddress: string): Promise<Exit[]>;
+    findAllExits(): Promise<Exit[]>;
+    deleteExit(exit: Exit): Promise<void>;
 }
