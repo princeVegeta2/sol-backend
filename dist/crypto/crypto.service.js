@@ -362,13 +362,16 @@ let CryptoService = class CryptoService {
             throw new common_1.BadRequestException('Failed to fetch price of SOL. Try again');
         }
         let newUnrealizedPnl = 0;
+        let errors = [];
         await Promise.all(holdings.map(async (holding) => {
-            let newPrice = 0;
+            let newPrice = holding.price;
             try {
                 newPrice = await this.solanaService.getTokenSellPrice(holding.mintAddress);
             }
             catch (error) {
-                console.log('The token has no Liquidity or failed to fetch token price');
+                const errorMessage = `The token ${holding.mintAddress} has no liquidity or failed to fetch token price`;
+                console.log(errorMessage);
+                errors.push({ mintAddress: holding.mintAddress, message: errorMessage });
             }
             await this.holdingService.updateHoldingPnl(holding, newPrice);
             await this.holdingService.updateHoldingPrice(holding, newPrice, solPrice);
@@ -389,7 +392,7 @@ let CryptoService = class CryptoService {
         }));
         const sanitizedData = enrichedData.map(({ id, user, ...rest }) => rest);
         await this.statService.updateStatOnHoldingUpdate(userStat, newUnrealizedPnl);
-        return sanitizedData;
+        return ({ holdings: sanitizedData, errors });
     }
     async getAllUserHoldings(userId) {
         const user = await this.userService.findUserById(userId);

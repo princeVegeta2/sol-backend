@@ -84,23 +84,29 @@ export declare class CryptoService {
         createdAt: Date;
         updatedAt: Date;
     }>;
-    updateHoldingsPrice(userId: number): Promise<{
-        name: string;
-        ticker: string;
-        image: string;
-        website: string;
-        xPage: string;
-        telegram: string;
-        mintAddress: string;
-        amount: number;
-        price: number;
-        average_price: number;
-        value_usd: number;
-        value_sol: number;
-        pnl: number;
-        createdAt: Date;
-        updatedAt: Date;
-    }[]>;
+    updateHoldingsPrice(userId: number): Promise<any[] | {
+        holdings: {
+            name: string;
+            ticker: string;
+            image: string;
+            website: string;
+            xPage: string;
+            telegram: string;
+            mintAddress: string;
+            amount: number;
+            price: number;
+            average_price: number;
+            value_usd: number;
+            value_sol: number;
+            pnl: number;
+            createdAt: Date;
+            updatedAt: Date;
+        }[];
+        errors: {
+            mintAddress: string;
+            message: string;
+        }[];
+    }>;
     getAllUserHoldings(userId: number): Promise<{
         name: string;
         ticker: string;
