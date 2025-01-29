@@ -488,6 +488,7 @@ export class CryptoService {
             throw new BadRequestException('Failed to fetch price of SOL. Try again');
         }
         let newUnrealizedPnl = 0;
+        let errors: { mintAddress: string; message: string }[] = [];
         // Use Promise.all to wait for all async operations
         await Promise.all(
             holdings.map(async (holding) => {
@@ -495,7 +496,9 @@ export class CryptoService {
                 try {
                     newPrice = await this.solanaService.getTokenSellPrice(holding.mintAddress);
                 } catch(error) {
-                    console.log('The token has no Liquidity or failed to fetch token price');
+                    const errorMessage = `The token ${holding.mintAddress} has no liquidity or failed to fetch token price`;
+                    console.log(errorMessage);
+                    errors.push({ mintAddress: holding.mintAddress, message: errorMessage });
                 }
                 // Must be called BEFORE price because it uses the old price in the calculation
                 await this.holdingService.updateHoldingPnl(holding, newPrice);
@@ -527,7 +530,7 @@ export class CryptoService {
         const sanitizedData = enrichedData.map(({ id, user, ...rest }) => rest);
         // Update stats with new pnl
         await this.statService.updateStatOnHoldingUpdate(userStat, newUnrealizedPnl);
-        return sanitizedData;
+        return ({ holdings: sanitizedData, errors });
     }
 
     // Get all holdings with no updates(everything is updated in createEntry and createExit)
