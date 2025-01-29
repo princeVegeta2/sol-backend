@@ -75,6 +75,9 @@ let SolanaService = class SolanaService {
             const solUsdPrice = await this.getTokenSellPrice(this.solMint);
             const inAmountUsdValue = solAmount * solUsdPrice;
             const effectiveUsdValue = effectiveTokens * outputTokenUsdPrice;
+            if (effectiveUsdValue <= 0) {
+                throw new common_1.BadRequestException("Failed to place a quote. Token USD value failed to calculate");
+            }
             const solValue = effectiveUsdValue / solUsdPrice;
             return {
                 normalizedThresholdToken: parseFloat(effectiveTokens.toFixed(tokenDecimals)),
