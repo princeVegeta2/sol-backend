@@ -57,6 +57,9 @@ let CryptoController = class CryptoController {
     async getBulkTokenData(mintAddresses) {
         return this.solanaService.getBulkTokenData(mintAddresses);
     }
+    async getTokenDecimals(mintAddress) {
+        return this.solanaService.getTokenDecimals(mintAddress);
+    }
     async createEntry(req, createEntryDto) {
         const userId = req.user.userId;
         if (!userId) {
@@ -196,6 +199,13 @@ __decorate([
     __metadata("design:paramtypes", [Array]),
     __metadata("design:returntype", Promise)
 ], CryptoController.prototype, "getBulkTokenData", null);
+__decorate([
+    (0, common_1.Get)('token-decimals/:mintAddress'),
+    __param(0, (0, common_1.Param)('mintAddress')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], CryptoController.prototype, "getTokenDecimals", null);
 __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Post)('create-entry'),

@@ -24,10 +24,10 @@ import {
     @Column({ type: 'numeric', precision: 30, scale: 6, nullable: false })
     amount: number;
 
-    @Column({ type: 'numeric', precision: 15, scale: 6, nullable: false })
+    @Column({ type: 'numeric', precision: 15, scale: 12, nullable: false })
     price: number;
 
-    @Column({ type: 'numeric', precision: 15, scale: 6, nullable: false })
+    @Column({ type: 'numeric', precision: 15, scale: 12, nullable: false })
     average_price: number;
 
     @Column({ type: 'numeric', precision: 30, scale: 4, default: 0 })

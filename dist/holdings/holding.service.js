@@ -41,7 +41,7 @@ let HoldingService = class HoldingService {
         const oldAvgPrice = parseFloat(holding.average_price?.toString() || '0');
         const purchaseAmount = parseFloat(amount.toString());
         const combinedAmount = holdingAmount + purchaseAmount;
-        const roundedAmount = parseFloat(combinedAmount.toFixed(6));
+        const roundedAmount = parseFloat(combinedAmount.toFixed(12));
         let newAvgPrice = oldAvgPrice;
         if (purchaseAmount > 0 && combinedAmount > 0) {
             const oldTotalCost = holdingAmount * oldAvgPrice;
@@ -74,7 +74,7 @@ let HoldingService = class HoldingService {
         const holdingAmount = parseFloat(holding.amount.toString());
         const exitAmount = parseFloat(amount.toString());
         const combinedAmount = holdingAmount - exitAmount;
-        const finalAmount = parseFloat(combinedAmount.toFixed(6));
+        const finalAmount = parseFloat(combinedAmount.toFixed(12));
         const oldUsd = parseFloat(oldUsdValue.toString());
         const oldSol = parseFloat(oldSolValue.toString());
         const subtractUsd = parseFloat(subtractedUsdValue.toString());

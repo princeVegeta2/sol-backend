@@ -33,11 +33,11 @@ __decorate([
     __metadata("design:type", Number)
 ], Holding.prototype, "amount", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'numeric', precision: 15, scale: 6, nullable: false }),
+    (0, typeorm_1.Column)({ type: 'numeric', precision: 15, scale: 12, nullable: false }),
     __metadata("design:type", Number)
 ], Holding.prototype, "price", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'numeric', precision: 15, scale: 6, nullable: false }),
+    (0, typeorm_1.Column)({ type: 'numeric', precision: 15, scale: 12, nullable: false }),
     __metadata("design:type", Number)
 ], Holding.prototype, "average_price", void 0);
 __decorate([

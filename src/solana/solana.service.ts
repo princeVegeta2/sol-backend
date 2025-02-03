@@ -6,11 +6,11 @@ import axios from 'axios';
 export class SolanaService {
     private readonly connection: Connection;
     private readonly solMint = 'So11111111111111111111111111111111111111112';
+    private readonly rpcUrl = process.env.QUICKNODE_RPC_URL
 
     constructor() {
         // Initialize a connection to the Solana blockchain using QuickNode RPC URL
-        const rpcUrl = process.env.QUICKNODE_RPC_URL; // Make sure this is in your .env file
-        this.connection = new Connection(rpcUrl, 'confirmed');
+        this.connection = new Connection(this.rpcUrl, 'confirmed');
     }
 
     async getTokenQuoteSolInput(
@@ -49,44 +49,7 @@ export class SolanaService {
             const outAmountBaseUnits = parseFloat(outAmountThresholdStr);
 
             // 4a. Check if Jupiter provided decimals in `mintInfos[...]`.
-            let tokenDecimals: number | null = null;
-            const mintInfos = rawData.mintInfos;
-            if (mintInfos && mintInfos[outputMint]) {
-                const possibleDecimals = mintInfos[outputMint].decimals;
-                if (typeof possibleDecimals === 'number') {
-                    tokenDecimals = possibleDecimals;
-                }
-            }
-
-            // 4b. If no decimals provided, guess from swapUsdValue (heuristic).
-            if (tokenDecimals == null || tokenDecimals < 0) {
-                // only do this if we have swapUsdValue
-                if (!swapUsdValueStr) {
-                    // fallback: default to 9 if we can't guess
-                    tokenDecimals = 9;
-                } else {
-                    const swapUsdValue = parseFloat(swapUsdValueStr);
-                    if (swapUsdValue <= 0) {
-                        // fallback: default to 9 if swapUsdValue is missing or invalid
-                        tokenDecimals = 9;
-                    } else {
-                        // guess decimals by seeing which exponent yields a final USD near swapUsdValue
-                        const tokenSellPrice = outputTokenUsdPrice; // or fetch your own
-                        let bestD = 0;
-                        let bestDiff = Number.MAX_VALUE;
-                        for (let d = 0; d <= 12; d++) {
-                            const rawDec = outAmountBaseUnits / 10 ** d;
-                            const approxUsd = rawDec * tokenSellPrice;
-                            const diff = Math.abs(approxUsd - swapUsdValue);
-                            if (diff < bestDiff) {
-                                bestDiff = diff;
-                                bestD = d;
-                            }
-                        }
-                        tokenDecimals = bestD;
-                    }
-                }
-            }
+            const tokenDecimals = await this.getTokenDecimals(outputMint);
 
             // 5. Now we have a tokenDecimals number. Convert outAmountThreshold to decimal
             const normalizedOutAmount = outAmountBaseUnits / 10 ** tokenDecimals;
@@ -121,6 +84,7 @@ export class SolanaService {
                 solValue,
                 priceImpact: `${priceImpactPct.toFixed(2)}%`,
                 slippage: `${(slippage / 100).toFixed(2)}%`,
+                decimals: tokenDecimals
             };
         } catch (error) {
             console.error('Error fetching token quote:', error.response?.data || error.message);
@@ -133,72 +97,43 @@ export class SolanaService {
     // Minimum SOL: 0.0001
     async getTokenQuoteSolOutput(
         inputMint: string,
-        tokenAmount: number,
+        tokenAmount: number, // user-friendly decimal
         slippage: number
     ): Promise<any> {
-        if (!inputMint || !tokenAmount || tokenAmount < 0.0001) {
-            throw new Error('Invalid parameters: inputMint is required, and tokenAmount must be at least 0.0001');
+
+        // Basic parameter checks, etc.
+
+        // 1. Get the token's actual decimals from chain
+        const decimals = await this.getTokenDecimals(inputMint);
+
+        // 2. Convert the user input to base units
+        const amountInBaseUnits = Math.floor(tokenAmount * 10 ** decimals);
+        if (amountInBaseUnits <= 0) {
+            throw new Error('Amount is too small after converting to base units');
         }
 
+        // 3. Construct the aggregator (Jupiter) URL
         const jupApiBase = 'https://quote-api.jup.ag/v6/quote';
-        const tokenSellPrice = await this.getTokenSellPrice(inputMint); // USD price of the token user is selling
-        const approximateUserUsd = tokenAmount * tokenSellPrice;        // roughly how much USD user is selling
+        const url = `${jupApiBase}?inputMint=${inputMint}&outputMint=${this.solMint}&amount=${amountInBaseUnits}&slippageBps=${slippage}`;
 
-        let bestDecimals = 9;
-        let bestDiff = Number.MAX_VALUE;
-        let bestResponse: any = null;
+        // 4. Fetch aggregator data
+        const resp = await axios.get(url);
+        const data = resp.data;
 
-        // 1. Loop through d=0..12 to guess the token’s decimals
-        for (let d = 0; d <= 12; d++) {
-            const amountInBaseUnits = Math.floor(tokenAmount * 10 ** d);
-
-            if (amountInBaseUnits <= 0) continue; // skip if the baseUnits is zero
-
-            const url = `${jupApiBase}?inputMint=${inputMint}&outputMint=${this.solMint}&amount=${amountInBaseUnits}&slippageBps=${slippage}`;
-
-            try {
-                const resp = await axios.get(url);
-                const data = resp.data;
-
-                // aggregator may or may not have a swapUsdValue
-                const aggregatorSwapUsd = parseFloat(data.swapUsdValue || '0');
-                // If aggregatorSwapUsd is > 0, compare it
-                if (aggregatorSwapUsd > 0) {
-                    const diff = Math.abs(aggregatorSwapUsd - approximateUserUsd);
-                    if (diff < bestDiff) {
-                        bestDiff = diff;
-                        bestDecimals = d;
-                        bestResponse = data;
-                    }
-                } else {
-                    // aggregator might not supply swapUsdValue, you could fallback to compare outAmountThreshold in SOL, etc.
-                }
-            } catch (err) {
-                // aggregator call might fail or have no route for that decimal guess, ignore.
-                continue;
-            }
-        }
-
-        // 2. If we never found a valid aggregator response, fail
-        if (!bestResponse) {
-            throw new Error('Failed to find a route that matched any decimals guess 0..12');
-        }
-
-        // 3. Now parse the best aggregator response
-        const raw = bestResponse;
-        const outLamports = parseFloat(raw.otherAmountThreshold || '0'); // guaranteed lamports of SOL
-        const outSol = outLamports / 1e9; // decimal SOL
+        // 5. Parse out the lamports, convert to SOL
+        const outLamports = parseFloat(data.otherAmountThreshold || '0');
+        const outSol = outLamports / 1e9;
         const solUsdPrice = await this.getTokenSellPrice(this.solMint);
         const outUsd = outSol * solUsdPrice;
-        const priceImpactPct = parseFloat(raw.priceImpactPct) * 100 || 0;
 
+        // 6. Return normalized result
         return {
             normalizedThresholdSol: outSol.toFixed(6),
             usdValue: outUsd.toFixed(4),
-            priceImpactPct: priceImpactPct.toFixed(2),
+            priceImpactPct: (parseFloat(data.priceImpactPct) * 100 || 0).toFixed(2),
             slippage: (slippage / 100).toFixed(2) + '%',
-            guessedDecimals: bestDecimals,
-            raw,
+            decimalsUsed: decimals,
+            raw: data,
         };
     }
 
@@ -207,187 +142,145 @@ export class SolanaService {
         outputMint: string,
         solAmount: number,
         slippage: number
-    ): Promise<any> {
+      ): Promise<any> {
         if (!outputMint || !solAmount || solAmount < 0.0001) {
-            throw new Error(
-                'Invalid parameters: outputMint is required, and solAmount must be at least 0.0001 SOL'
-            );
+          throw new Error(
+            'Invalid parameters: outputMint is required, and solAmount must be at least 0.0001 SOL'
+          );
         }
-
+      
         // 1. Convert SOL to lamports (1 SOL = 1e9 lamports)
         const lamports = Math.round(solAmount * 1e9);
-
-        // 2. Call Jupiter for the quote
+      
+        // 2. Construct Jupiter quote URL
         const jupApiUrl = `https://quote-api.jup.ag/v6/quote?inputMint=${this.solMint}&outputMint=${outputMint}&amount=${lamports}&slippageBps=${slippage}`;
-
+      
+        // 3. Fetch aggregator data from Jupiter
+        let rawData: any;
         try {
-            const quoteResponse = await axios.get(jupApiUrl);
-            const rawData = quoteResponse.data;
-
-            // 3. Parse the raw Jupiter fields
-            //    - otherAmountThreshold: guaranteed min *base units* of output token
-            //    - swapUsdValue: approximate final output's total USD
-            const outAmountThresholdStr = rawData.otherAmountThreshold;
-            const swapUsdValueStr = rawData.swapUsdValue; // v6 sometimes has this
-            if (!outAmountThresholdStr || !swapUsdValueStr) {
-                throw new Error('Jupiter did not return otherAmountThreshold or swapUsdValue.');
-            }
-
-            const outAmountBaseUnits = parseFloat(outAmountThresholdStr);
-            const swapUsdValue = parseFloat(swapUsdValueStr);
-            if (outAmountBaseUnits <= 0 || swapUsdValue <= 0) {
-                throw new Error('Invalid threshold or swapUsdValue from Jupiter.');
-            }
-
-            // 4. Find the token's decimals by “guessing” which exponent yields a USD value
-            //    close to swapUsdValue when multiplied by the token’s price in USD.
-            //    We’ll loop from 0..12 and see which yields the smallest difference.
-            const tokenSellPrice = await this.getTokenSellPrice(outputMint); // token's USD price
-            let bestDecimals = 0;
-            let bestDiff = Number.MAX_VALUE;
-
-            for (let d = 0; d <= 12; d++) {
-                const outDecimal = outAmountBaseUnits / 10 ** d; // if the token had d decimals
-                const approxUsd = outDecimal * tokenSellPrice;   // approximate final USD value
-                const diff = Math.abs(approxUsd - swapUsdValue); // how close to Jupiter's swapUsdValue
-                if (diff < bestDiff) {
-                    bestDiff = diff;
-                    bestDecimals = d;
-                }
-            }
-
-            // 5. Now we have a guessed decimals = bestDecimals
-            //    Convert to decimal token amount using that guess
-            const rawDecimalOut = outAmountBaseUnits / 10 ** bestDecimals;
-
-            // 6. Price impact
-            const priceImpactPct = parseFloat(rawData.priceImpactPct) * 100;
-            const priceImpactMultiplier = 1 - priceImpactPct / 100;
-
-            // 7. The “effective” token amount (after price impact)
-            const effectiveTokens = rawDecimalOut * priceImpactMultiplier;
-
-            // 8. Compute what user spent in USD (SOL -> USD)
-            const solUsdPrice = await this.getTokenSellPrice(this.solMint);
-            const inAmountUsdValue = solAmount * solUsdPrice;
-
-            // 9. Final USD of the tokens received
-            const effectiveUsdValue = effectiveTokens * tokenSellPrice;
-
-            // 10. Also express that in SOL
-            let solValue = effectiveUsdValue / solUsdPrice;
-            // Optional clamp: If your logic wants to prevent it from exceeding input SOL:
-            if (solValue > solAmount) {
-                solValue = solAmount;
-            }
-
-            // 11. Return both raw data and the “normalized” fields
-            return {
-                normalized: {
-                    decimalsGuessed: bestDecimals,
-                    normalizedThresholdToken: parseFloat(effectiveTokens.toFixed(bestDecimals)),
-                    inAmountUsdValue,
-                    usdValue: parseFloat(effectiveUsdValue.toFixed(4)),
-                    solValue: parseFloat(solValue.toFixed(6)),
-                    priceImpact: `${priceImpactPct.toFixed(2)}%`,
-                    slippage: `${(slippage / 100).toFixed(2)}%`,
-                },
-                raw: rawData, // so you can inspect the full Jupiter response
-            };
+          const resp = await axios.get(jupApiUrl);
+          rawData = resp.data;
         } catch (error) {
-            console.error('Error fetching token quote:', error.response?.data || error.message);
-            throw new Error('Failed to fetch token quote from Jupiter API');
+          console.error('Error fetching token quote:', error.response?.data || error.message);
+          throw new Error('Failed to fetch token quote from Jupiter API');
         }
-    }
+      
+        // 4. Parse the aggregator response
+        //    - otherAmountThreshold: guaranteed min *base units* of output token
+        //    - swapUsdValue: approximate final output's total USD
+        const outAmountThresholdStr = rawData.otherAmountThreshold;
+        const swapUsdValueStr = rawData.swapUsdValue; // sometimes missing or 0 if no route
+      
+        if (!outAmountThresholdStr || !swapUsdValueStr) {
+          throw new Error(
+            'Jupiter did not return otherAmountThreshold or swapUsdValue.'
+          );
+        }
+      
+        const outAmountBaseUnits = parseFloat(outAmountThresholdStr);
+        const swapUsdValue = parseFloat(swapUsdValueStr);
+      
+        if (outAmountBaseUnits <= 0 || swapUsdValue <= 0) {
+          throw new Error('Invalid threshold or swapUsdValue from Jupiter.');
+        }
+      
+        // 5. Fetch the SPL token's decimals from the chain
+        //    (assuming you have a method like getTokenSupply(...) -> returns `decimals`)
+        const tokenDecimals = await this.getTokenDecimals(outputMint);
+      
+        // 6. Convert base units to user-friendly decimal
+        const rawDecimalOut = outAmountBaseUnits / 10 ** tokenDecimals;
+      
+        // 7. Price impact (optional check)
+        const priceImpactPct = (parseFloat(rawData.priceImpactPct) || 0) * 100;
+      
+        // 8. The “effective” token amount (this version doesn't forcibly compute 'priceImpactMultiplier',
+        //    since outAmountThreshold is already a guaranteed amount after slippage. 
+        //    But if you want a "pre-impact" vs. "post-impact" number, you can do more math.)
+        const normalizedThresholdToken = rawDecimalOut;
+      
+        // 9. Determine how much SOL we spent in USD terms
+        const solUsdPrice = await this.getTokenSellPrice(this.solMint);
+        const inAmountUsdValue = solAmount * solUsdPrice;
+      
+        // 10. The aggregator's approximate final output's total USD
+        //     (we already have swapUsdValue from aggregator).
+        const outUsdValue = swapUsdValue; 
+      
+        // 11. Also express that USD in terms of SOL, if you like:
+        let solValue = outUsdValue / solUsdPrice;
+        if (solValue > solAmount) {
+          solValue = solAmount;  // optional clamp
+        }
+      
+        // 12. Return both raw data and the “normalized” fields
+        return {
+          normalized: {
+            tokenDecimals,
+            // guaranteed min token amount in user-friendly decimals
+            normalizedThresholdToken: parseFloat(
+              normalizedThresholdToken.toFixed(tokenDecimals)
+            ),
+      
+            // how much SOL we spent in USD
+            inAmountUsdValue: parseFloat(inAmountUsdValue.toFixed(4)),
+      
+            // aggregator's swapUsdValue for final output in USD
+            usdValue: parseFloat(outUsdValue.toFixed(4)),
+      
+            // optional reference in SOL
+            solValue: parseFloat(solValue.toFixed(6)),
+      
+            priceImpact: `${priceImpactPct.toFixed(2)}%`,
+            slippage: `${(slippage / 100).toFixed(2)}%`,
+          },
+          raw: rawData, // so you can inspect the full Jupiter response
+        };
+      }      
 
 
-    async getTokenQuoteSolOutputTest(inputMint: string, tokenAmount: number, slippage: number): Promise<any> {
-        if (!inputMint || !tokenAmount || tokenAmount < 0.0001) {
-            throw new Error('Invalid parameters: inputMint is required, and tokenAmount must be at least 0.0001');
+    async getTokenQuoteSolOutputTest(
+        inputMint: string,
+        tokenAmount: number, // user-friendly decimal
+        slippage: number
+    ): Promise<any> {
+
+        // Basic parameter checks, etc.
+
+        // 1. Get the token's actual decimals from chain
+        const decimals = await this.getTokenDecimals(inputMint);
+
+        // 2. Convert the user input to base units
+        const amountInBaseUnits = Math.floor(tokenAmount * 10 ** decimals);
+        if (amountInBaseUnits <= 0) {
+            throw new Error('Amount is too small after converting to base units');
         }
 
-        // 1. Fetch aggregator data from Jupiter
-        //    We don't yet know how many decimals the input token has, so we'll guess or fallback
+        // 3. Construct the aggregator (Jupiter) URL
         const jupApiBase = 'https://quote-api.jup.ag/v6/quote';
-        // We'll start by leaving `amount` blank, then guess the decimals. 
-        // Actually, we can do the same “decimals guess” approach:
-        // we do 0..12 and see which yields a "swapUsdValue" close to "tokenAmount * tokenSellPrice"
-        // Or a simpler approach: call /price API or call the aggregator once with a default, then refine.
+        const url = `${jupApiBase}?inputMint=${inputMint}&outputMint=${this.solMint}&amount=${amountInBaseUnits}&slippageBps=${slippage}`;
 
-        // For a simpler example, let's do exactly what we did with `getTokenQuoteSolInputTest`:
-        // - Hardcode `tokenDecimals=6` => Then adjust to guess from aggregator's `swapUsdValue`.
-        //   This is the test approach.
+        // 4. Fetch aggregator data
+        const resp = await axios.get(url);
+        const data = resp.data;
 
-        const tokenSellPrice = await this.getTokenSellPrice(inputMint); // USD price of input token
-        const approximateUserUsd = tokenAmount * tokenSellPrice;        // approx how many USD user is selling
-
-        // 2. We'll guess the input token decimals by seeing which `d` yields a swapUsdValue near `approximateUserUsd`.
-        //    (If aggregator's 'swapUsdValue' is missing or inaccurate, fallback to 9 or 6.)
-        //    We'll do a quick helper function:
-
-        // a) Try decimals from 0..12. 
-        // b) For each, we do amountInBaseUnits = floor(tokenAmount * 10^d).
-        // c) We call aggregator, parse 'swapUsdValue' for how many SOL in USD we get. 
-        // d) Compare difference vs. `approximateUserUsd`.
-
-        let bestDecimals = 9;
-        let bestDiff = Number.MAX_VALUE;
-        let bestResponse = null;
-
-        for (let d = 0; d <= 12; d++) {
-            const amountInBaseUnits = Math.floor(tokenAmount * 10 ** d);
-
-            // If the user typed e.g. "89048.993039783" tokens,
-            // we must not pass 0 lamports. So skip if amountInBaseUnits=0 
-            if (amountInBaseUnits <= 0) continue;
-
-            const url = `${jupApiBase}?inputMint=${inputMint}&outputMint=${this.solMint}&amount=${amountInBaseUnits}&slippageBps=${slippage}`;
-            try {
-                const resp = await axios.get(url);
-                const data = resp.data;
-                const aggregatorSwapUsd = parseFloat(data.swapUsdValue || '0');
-                if (aggregatorSwapUsd > 0) {
-                    const diff = Math.abs(aggregatorSwapUsd - approximateUserUsd);
-                    if (diff < bestDiff) {
-                        bestDiff = diff;
-                        bestDecimals = d;
-                        bestResponse = data;
-                    }
-                } else {
-                    // aggregator might not supply swapUsdValue or be zero
-                    // skip or handle differently
-                }
-            } catch (err) {
-                // aggregator might fail for some decimals or there's no route
-                // just ignore and continue
-            }
-        }
-
-        // If we never found anything better, fallback to bestResponse or do another fallback
-        if (!bestResponse) {
-            throw new Error('Failed to find a route that matched a decimals guess from 0..12');
-        }
-
-        // 3. Now we parse final bestResponse
-        const raw = bestResponse;
-        const outLamports = parseFloat(raw.otherAmountThreshold || '0'); // guaranteed lamports of SOL
-        const outSol = outLamports / 1e9; // convert to decimal SOL
+        // 5. Parse out the lamports, convert to SOL
+        const outLamports = parseFloat(data.otherAmountThreshold || '0');
+        const outSol = outLamports / 1e9;
         const solUsdPrice = await this.getTokenSellPrice(this.solMint);
         const outUsd = outSol * solUsdPrice;
-        const priceImpactPct = parseFloat(raw.priceImpactPct) * 100 || 0;
 
+        // 6. Return normalized result
         return {
-            normalized: {
-                decimalsGuessed: bestDecimals,
-                guaranteedSol: parseFloat(outSol.toFixed(6)),
-                guaranteedUsd: parseFloat(outUsd.toFixed(4)),
-                priceImpactPct: priceImpactPct.toFixed(2),
-                slippage: `${(slippage / 100).toFixed(2)}%`,
-                userUsdApprox: approximateUserUsd,
-            },
-            raw,
+            normalizedThresholdSol: outSol.toFixed(6),
+            usdValue: outUsd.toFixed(4),
+            priceImpactPct: (parseFloat(data.priceImpactPct) * 100 || 0).toFixed(2),
+            slippage: (slippage / 100).toFixed(2) + '%',
+            decimalsUsed: decimals,
+            raw: data,
         };
     }
+
 
 
     async getTokenData(mintAddress: string): Promise<any> {
@@ -532,6 +425,22 @@ export class SolanaService {
         } catch (error) {
             console.error('Error fetching metadata:', error.message);
             throw new Error(`Failed to fetch token metadata: ${error.message}`);
+        }
+    }
+
+    async getTokenDecimals(mintAddress: string) {
+        try {
+            const response = await axios.post(this.rpcUrl, {
+                jsonrpc: '2.0',
+                id: 1,
+                method: 'getTokenSupply',
+                params: [mintAddress],
+            });
+
+            return response.data.result.value.decimals; // Return supply data
+        } catch (error) {
+            console.error('Error fetching token supply:', error.message);
+            throw new Error('Failed to fetch token supply');
         }
     }
 }

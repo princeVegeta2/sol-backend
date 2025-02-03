@@ -14,6 +14,7 @@ export declare class CryptoController {
     getTokenPrice(mintAddress: string): Promise<number>;
     getTokenSellPrice(mintAddress: string): Promise<number>;
     getBulkTokenData(mintAddresses: string[]): Promise<any[]>;
+    getTokenDecimals(mintAddress: string): Promise<any>;
     createEntry(req: any, createEntryDto: CreateEntryDto): Promise<{
         id: number;
         solBalance: number;

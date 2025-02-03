@@ -1,6 +1,7 @@
 export declare class SolanaService {
     private readonly connection;
     private readonly solMint;
+    private readonly rpcUrl;
     constructor();
     getTokenQuoteSolInput(outputMint: string, solAmount: number, slippage: number, outputTokenUsdPrice: number): Promise<any>;
     getTokenQuoteSolOutput(inputMint: string, tokenAmount: number, slippage: number): Promise<any>;
@@ -11,4 +12,5 @@ export declare class SolanaService {
     getTokenPrice(mintAddress: string): Promise<number>;
     getTokenSellPrice(mintAddress: string): Promise<number>;
     private getTokenMetadata;
+    getTokenDecimals(mintAddress: string): Promise<any>;
 }

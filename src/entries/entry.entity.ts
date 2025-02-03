@@ -30,7 +30,7 @@ export class Entry {
   @Column({ type: 'numeric', precision: 30, scale: 4, default: 0 })
   value_sol: number;
 
-  @Column({ type: 'numeric', precision: 30, scale: 10, default: 0 })
+  @Column({ type: 'numeric', precision: 30, scale: 12, default: 0 })
   price: number;
 
   @Column({ type: 'numeric', precision: 32, scale: 4, nullable: true })

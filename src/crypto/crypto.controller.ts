@@ -1,4 +1,4 @@
-import { Controller, Get, Query, BadRequestException, Body, Post, Delete, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Query, BadRequestException, Body, Post, Delete, UseGuards, Request, Param } from '@nestjs/common';
 import { SolanaService } from '../solana/solana.service';
 import { CreateEntryDto } from '../entries/entry.dto';
 import { CreateExitDto } from 'src/exits/exit.dto';
@@ -71,6 +71,10 @@ export class CryptoController {
     return this.solanaService.getBulkTokenData(mintAddresses);
   }
 
+  @Get('token-decimals/:mintAddress')
+  async getTokenDecimals(@Param('mintAddress') mintAddress: string) {
+    return this.solanaService.getTokenDecimals(mintAddress);
+  }
   @UseGuards(JwtAuthGuard)
   @Post('create-entry')
   async createEntry(@Request() req, @Body() createEntryDto: CreateEntryDto) {

@@ -53,7 +53,7 @@ export class HoldingService {
 
         // 1) Sum up total tokens
         const combinedAmount = holdingAmount + purchaseAmount;
-        const roundedAmount = parseFloat(combinedAmount.toFixed(6)); // or keep more decimals if desired
+        const roundedAmount = parseFloat(combinedAmount.toFixed(12)); // or keep more decimals if desired
 
         // 2) Recalculate average price (only if purchaseAmount > 0 and combinedAmount > 0)
         //    Weighted average cost approach:
@@ -112,7 +112,7 @@ export class HoldingService {
 
         // 2. Subtract token amounts
         const combinedAmount = holdingAmount - exitAmount;
-        const finalAmount = parseFloat(combinedAmount.toFixed(6));
+        const finalAmount = parseFloat(combinedAmount.toFixed(12));
 
         // 3. Convert "value" inputs to float
         const oldUsd = parseFloat(oldUsdValue.toString());
