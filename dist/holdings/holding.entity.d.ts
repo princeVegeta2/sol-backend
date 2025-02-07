@@ -1,4 +1,5 @@
 import { User } from '../user/user.entity';
+import { Group } from 'src/groups/group.entity';
 export declare class Holding {
     id: number;
     user: User;
@@ -11,4 +12,5 @@ export declare class Holding {
     pnl: number;
     createdAt: Date;
     updatedAt: Date;
+    group: Group;
 }

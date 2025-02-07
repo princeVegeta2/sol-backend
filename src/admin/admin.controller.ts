@@ -43,6 +43,11 @@ export class AdminController {
         return this.adminService.fetchAllStats();
     }
 
+    @Get('groups')
+    async getAllGroups() {
+        return this.adminService.fetchAllGroups();
+    }
+
     @Delete('holdings')
     async deleteHoldings(@Query('userId') userId?: number, @Query('mintAddress') mintAddress?: string) {
         if (userId && mintAddress) return this.adminService.deleteHoldingByUserIdAndMintAddress(userId, mintAddress);

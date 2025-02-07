@@ -4,6 +4,7 @@ import { Repository } from "typeorm";
 import { Holding } from "./holding.entity";
 import { User } from "src/user/user.entity";
 import { UserService } from "src/user/user.service";
+import { Group } from "src/groups/group.entity";
 
 @Injectable()
 export class HoldingService {
@@ -171,9 +172,14 @@ export class HoldingService {
     async findAllUserHoldingsByUserId(userId: number): Promise<Holding[]> {
         return this.holdingRepository
             .createQueryBuilder('holding')
+            .leftJoinAndSelect('holding.group', 'group') 
             .where('holding.user_id = :userId', { userId })
+            .select([
+                'holding',       
+                'group.id'       
+            ])
             .getMany();
-    }
+    }    
 
     async findAllHoldingsByMintAddress(mintAddress: string): Promise<Holding[]> {
         return this.holdingRepository
@@ -204,5 +210,22 @@ export class HoldingService {
 
     async findAllHoldings(): Promise<Holding[]> {
         return this.holdingRepository.find();
+    }
+
+    async findHoldingsByGroupId(groupId: number): Promise<Holding[]> {
+        return await this.holdingRepository.find({
+            where: { group: { id: groupId } }, // Filter by group ID
+            relations: ["group"], // Ensure the group relation is included
+        });
+    } 
+
+    async addHoldingToGroup(group: Group, holding: Holding): Promise<void> {
+        holding.group = group;
+        await this.holdingRepository.save(holding);
+    }
+
+    async deleteHoldingFromGroup(holding: Holding): Promise<void> {
+        holding.group = null;
+        await this.holdingRepository.save(holding);
     }
 }

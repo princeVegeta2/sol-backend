@@ -20,6 +20,7 @@ const sol_balance_module_1 = require("./balance/sol_balance.module");
 const stats_module_1 = require("./stats/stats.module");
 const health_module_1 = require("./health/health.module");
 const admin_module_1 = require("./admin/admin.module");
+const group_module_1 = require("./groups/group.module");
 const typeorm_1 = require("@nestjs/typeorm");
 const config_1 = require("@nestjs/config");
 const path_1 = require("path");
@@ -40,6 +41,7 @@ exports.AppModule = AppModule = __decorate([
             stats_module_1.StatModule,
             health_module_1.HealthModule,
             admin_module_1.AdminModule,
+            group_module_1.GroupModule,
             typeorm_1.TypeOrmModule.forRootAsync({
                 imports: [config_1.ConfigModule],
                 inject: [config_1.ConfigService],

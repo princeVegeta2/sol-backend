@@ -17,14 +17,16 @@ const entry_service_1 = require("../entries/entry.service");
 const exit_service_1 = require("../exits/exit.service");
 const sol_balance_service_1 = require("../balance/sol_balance.service");
 const stats_service_1 = require("../stats/stats.service");
+const group_service_1 = require("../groups/group.service");
 let AdminService = class AdminService {
-    constructor(userService, holdingService, entryService, exitService, solBalanceService, statService) {
+    constructor(userService, holdingService, entryService, exitService, solBalanceService, statService, groupService) {
         this.userService = userService;
         this.holdingService = holdingService;
         this.entryService = entryService;
         this.exitService = exitService;
         this.solBalanceService = solBalanceService;
         this.statService = statService;
+        this.groupService = groupService;
     }
     async fetchAllUsers() {
         const users = await this.userService.findAllUsers();
@@ -79,6 +81,9 @@ let AdminService = class AdminService {
     async fetchStatByUserId(userId) {
         const stats = await this.statService.findStatByUserId(userId);
         return stats;
+    }
+    async fetchAllGroups() {
+        const groups = await this.groupService.findAllGroups();
     }
     async deleteHoldingsByUserId(userId) {
         const holdings = await this.holdingService.findAllUserHoldingsByUserId(userId);
@@ -149,6 +154,7 @@ exports.AdminService = AdminService = __decorate([
         entry_service_1.EntryService,
         exit_service_1.ExitService,
         sol_balance_service_1.SolBalanceService,
-        stats_service_1.StatService])
+        stats_service_1.StatService,
+        group_service_1.GroupService])
 ], AdminService);
 //# sourceMappingURL=admin.service.js.map

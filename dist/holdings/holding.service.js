@@ -108,7 +108,12 @@ let HoldingService = class HoldingService {
     async findAllUserHoldingsByUserId(userId) {
         return this.holdingRepository
             .createQueryBuilder('holding')
+            .leftJoinAndSelect('holding.group', 'group')
             .where('holding.user_id = :userId', { userId })
+            .select([
+            'holding',
+            'group.id'
+        ])
             .getMany();
     }
     async findAllHoldingsByMintAddress(mintAddress) {
@@ -136,6 +141,20 @@ let HoldingService = class HoldingService {
     }
     async findAllHoldings() {
         return this.holdingRepository.find();
+    }
+    async findHoldingsByGroupId(groupId) {
+        return await this.holdingRepository.find({
+            where: { group: { id: groupId } },
+            relations: ["group"],
+        });
+    }
+    async addHoldingToGroup(group, holding) {
+        holding.group = group;
+        await this.holdingRepository.save(holding);
+    }
+    async deleteHoldingFromGroup(holding) {
+        holding.group = null;
+        await this.holdingRepository.save(holding);
     }
 };
 exports.HoldingService = HoldingService;

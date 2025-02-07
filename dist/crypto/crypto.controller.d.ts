@@ -82,6 +82,7 @@ export declare class CryptoController {
     }>;
     updateHoldings(req: any): Promise<any[] | {
         holdings: {
+            group_id: number;
             name: string;
             ticker: string;
             image: string;
@@ -97,6 +98,7 @@ export declare class CryptoController {
             pnl: number;
             createdAt: Date;
             updatedAt: Date;
+            group: import("../groups/group.entity").Group;
         }[];
         errors: {
             mintAddress: string;
@@ -157,6 +159,7 @@ export declare class CryptoController {
     })[]>;
     deleteHolding(req: any, mintAddress: string): Promise<void>;
     getUserHoldings(req: any): Promise<{
+        group_id: number;
         name: string;
         ticker: string;
         image: string;
@@ -172,6 +175,7 @@ export declare class CryptoController {
         pnl: number;
         createdAt: Date;
         updatedAt: Date;
+        group: import("../groups/group.entity").Group;
     }[]>;
     getUserNetworth(req: any): Promise<{
         solNetworth: number;

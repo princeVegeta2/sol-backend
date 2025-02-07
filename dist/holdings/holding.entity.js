@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Holding = void 0;
 const typeorm_1 = require("typeorm");
 const user_entity_1 = require("../user/user.entity");
+const group_entity_1 = require("../groups/group.entity");
 let Holding = class Holding {
 };
 exports.Holding = Holding;
@@ -60,6 +61,11 @@ __decorate([
     (0, typeorm_1.UpdateDateColumn)({ name: 'updated_at', type: 'timestamptz', default: () => 'CURRENT_TIMESTAMP' }),
     __metadata("design:type", Date)
 ], Holding.prototype, "updatedAt", void 0);
+__decorate([
+    (0, typeorm_1.ManyToOne)(() => group_entity_1.Group),
+    (0, typeorm_1.JoinColumn)({ name: 'group_id' }),
+    __metadata("design:type", group_entity_1.Group)
+], Holding.prototype, "group", void 0);
 exports.Holding = Holding = __decorate([
     (0, typeorm_1.Entity)('holdings')
 ], Holding);

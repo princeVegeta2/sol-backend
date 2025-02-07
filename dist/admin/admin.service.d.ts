@@ -4,6 +4,7 @@ import { EntryService } from 'src/entries/entry.service';
 import { ExitService } from 'src/exits/exit.service';
 import { SolBalanceService } from 'src/balance/sol_balance.service';
 import { StatService } from 'src/stats/stats.service';
+import { GroupService } from 'src/groups/group.service';
 export declare class AdminService {
     private readonly userService;
     private readonly holdingService;
@@ -11,7 +12,8 @@ export declare class AdminService {
     private readonly exitService;
     private readonly solBalanceService;
     private readonly statService;
-    constructor(userService: UserService, holdingService: HoldingService, entryService: EntryService, exitService: ExitService, solBalanceService: SolBalanceService, statService: StatService);
+    private readonly groupService;
+    constructor(userService: UserService, holdingService: HoldingService, entryService: EntryService, exitService: ExitService, solBalanceService: SolBalanceService, statService: StatService, groupService: GroupService);
     fetchAllUsers(): Promise<import("../user/user.entity").User[]>;
     fetchAllHoldings(): Promise<import("../holdings/holding.entity").Holding[]>;
     fetchAllEntries(): Promise<void>;
@@ -26,6 +28,7 @@ export declare class AdminService {
     fetchAllExitsByMintAddress(mintAddress: string): Promise<import("../exits/exit.entity").Exit[]>;
     fetchBalanceByUserId(userId: number): Promise<void>;
     fetchStatByUserId(userId: number): Promise<import("../stats/stats.entity").Stat>;
+    fetchAllGroups(): Promise<void>;
     deleteHoldingsByUserId(userId: number): Promise<void>;
     deleteHoldingsByMintAddress(mintAddress: string): Promise<void>;
     deleteHoldingByUserIdAndMintAddress(userId: number, mintAddress: string): Promise<void>;

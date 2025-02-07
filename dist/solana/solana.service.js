@@ -215,7 +215,7 @@ let SolanaService = class SolanaService {
             }
             const sellPriceStr = tokenData?.extraInfo?.quotedPrice?.sellPrice;
             if (!sellPriceStr) {
-                throw new common_1.BadRequestException("The token has no Liquidity and cannot be sold");
+                throw new Error("The token has no Liquidity and cannot be sold");
             }
             const sellPriceNum = parseFloat(sellPriceStr);
             if (isNaN(sellPriceNum)) {

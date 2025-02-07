@@ -53,6 +53,9 @@ let AdminController = class AdminController {
             return this.adminService.fetchStatByUserId(userId);
         return this.adminService.fetchAllStats();
     }
+    async getAllGroups() {
+        return this.adminService.fetchAllGroups();
+    }
     async deleteHoldings(userId, mintAddress) {
         if (userId && mintAddress)
             return this.adminService.deleteHoldingByUserIdAndMintAddress(userId, mintAddress);
@@ -129,6 +132,12 @@ __decorate([
     __metadata("design:paramtypes", [Number]),
     __metadata("design:returntype", Promise)
 ], AdminController.prototype, "getAllStats", null);
+__decorate([
+    (0, common_1.Get)('groups'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "getAllGroups", null);
 __decorate([
     (0, common_1.Delete)('holdings'),
     __param(0, (0, common_1.Query)('userId')),

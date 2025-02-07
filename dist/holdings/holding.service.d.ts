@@ -2,6 +2,7 @@ import { Repository } from "typeorm";
 import { Holding } from "./holding.entity";
 import { User } from "src/user/user.entity";
 import { UserService } from "src/user/user.service";
+import { Group } from "src/groups/group.entity";
 export declare class HoldingService {
     private holdingRepository;
     private userService;
@@ -29,4 +30,7 @@ export declare class HoldingService {
         holdingsUsdValue: number;
     }>;
     findAllHoldings(): Promise<Holding[]>;
+    findHoldingsByGroupId(groupId: number): Promise<Holding[]>;
+    addHoldingToGroup(group: Group, holding: Holding): Promise<void>;
+    deleteHoldingFromGroup(holding: Holding): Promise<void>;
 }

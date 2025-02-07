@@ -8,6 +8,7 @@ import {
     JoinColumn,
   } from 'typeorm';
   import { User } from '../user/user.entity'; 
+  import { Group } from 'src/groups/group.entity';
 
   @Entity('holdings') // Map this class to the 'holdings' table
   export class Holding {
@@ -44,4 +45,9 @@ import {
   
     @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz', default: () => 'CURRENT_TIMESTAMP' })
     updatedAt: Date;
+
+    @ManyToOne(() => Group)
+    @JoinColumn({ name: 'group_id' })
+    group: Group;
+
   }

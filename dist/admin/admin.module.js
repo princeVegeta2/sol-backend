@@ -16,12 +16,13 @@ const entry_module_1 = require("../entries/entry.module");
 const exit_module_1 = require("../exits/exit.module");
 const sol_balance_module_1 = require("../balance/sol_balance.module");
 const stats_module_1 = require("../stats/stats.module");
+const group_module_1 = require("../groups/group.module");
 let AdminModule = class AdminModule {
 };
 exports.AdminModule = AdminModule;
 exports.AdminModule = AdminModule = __decorate([
     (0, common_1.Module)({
-        imports: [user_module_1.UserModule, holding_module_1.HoldingModule, entry_module_1.EntryModule, exit_module_1.ExitModule, sol_balance_module_1.SolBalanceModule, stats_module_1.StatModule],
+        imports: [user_module_1.UserModule, holding_module_1.HoldingModule, entry_module_1.EntryModule, exit_module_1.ExitModule, sol_balance_module_1.SolBalanceModule, stats_module_1.StatModule, group_module_1.GroupModule],
         controllers: [admin_controller_1.AdminController],
         providers: [admin_service_1.AdminService],
     })

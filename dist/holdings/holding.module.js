@@ -12,6 +12,7 @@ const typeorm_1 = require("@nestjs/typeorm");
 const holding_entity_1 = require("./holding.entity");
 const holding_service_1 = require("./holding.service");
 const user_module_1 = require("../user/user.module");
+const group_module_1 = require("../groups/group.module");
 let HoldingModule = class HoldingModule {
 };
 exports.HoldingModule = HoldingModule;
@@ -20,6 +21,7 @@ exports.HoldingModule = HoldingModule = __decorate([
         imports: [
             typeorm_1.TypeOrmModule.forFeature([holding_entity_1.Holding]),
             user_module_1.UserModule,
+            (0, common_1.forwardRef)(() => group_module_1.GroupModule),
         ],
         providers: [holding_service_1.HoldingService],
         exports: [holding_service_1.HoldingService],

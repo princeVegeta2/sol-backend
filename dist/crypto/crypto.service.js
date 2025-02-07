@@ -50,119 +50,123 @@ let CryptoService = class CryptoService {
             throw new common_1.BadRequestException('User balance not found');
         }
         console.log("Fetching the token quote");
-        const tokenQuote = await this.solanaService.getTokenQuoteSolOutput(createExitDto.mintAddress, createExitDto.amount, createExitDto.slippage);
-        if (!tokenQuote) {
-            throw new common_1.BadRequestException('Failed to fetch token quote');
+        try {
+            const tokenQuote = await this.solanaService.getTokenQuoteSolOutput(createExitDto.mintAddress, createExitDto.amount, createExitDto.slippage);
+            if (!tokenQuote) {
+                throw new common_1.BadRequestException('Failed to fetch token quote');
+            }
+            const solReceived = parseFloat(tokenQuote.normalizedThresholdSol);
+            const solUsdValue = tokenQuote.usdValue;
+            console.log(`Sol received: ${solReceived}, solUsdValue: ${solUsdValue}`);
+            console.log("Fetching token data");
+            const tokenData = await this.solanaService.getTokenData(createExitDto.mintAddress);
+            if (!tokenData) {
+                throw new common_1.BadRequestException('Token not found');
+            }
+            console.log("Fetching the holding");
+            const holding = await this.holdingService.findHoldingByUserIdAndMintAddress(userId, createExitDto.mintAddress);
+            if (!holding) {
+                throw new common_1.BadRequestException('No existing holding found for this token. Cannot exit a position that does not exist.');
+            }
+            if (holding.amount < createExitDto.amount) {
+                throw new common_1.BadRequestException('Not enough tokens in holding to sell this amount');
+            }
+            const sellPrice = await this.solanaService.getTokenSellPrice(createExitDto.mintAddress);
+            if (!sellPrice) {
+                throw new common_1.BadRequestException('Failed to fetch token price for the minted token');
+            }
+            console.log(`The sell price of the token: ${sellPrice}`);
+            const currentAveragePrice = parseFloat(holding.average_price.toString()) || 0;
+            const tokensSold = parseFloat(createExitDto.amount.toString());
+            const realizedPnl = (sellPrice - currentAveragePrice) * tokensSold;
+            console.log(`currentAveragePrice: ${currentAveragePrice}, tokensSold: ${tokensSold}, realizedPnl: ${realizedPnl}`);
+            const updatedBalance = await this.solBalanceService.updateBalanceAdd(balance, solReceived, solUsdValue);
+            if (!updatedBalance) {
+                throw new common_1.BadRequestException('Failed to update user balance');
+            }
+            console.log(`Updated balance SOL: ${updatedBalance.balance}, USD: ${updatedBalance.balance_usd}`);
+            console.log("Creating an exit record");
+            const exitRecord = await this.exitService.createExit({
+                user,
+                mintAddress: createExitDto.mintAddress,
+                amount: tokensSold,
+                value_usd: solUsdValue,
+                value_sol: solReceived,
+                price: sellPrice,
+                marketcap: tokenData.marketCap,
+                liquidity: tokenData.liquidity.usd,
+                pnl: parseFloat(realizedPnl.toFixed(4)),
+            });
+            console.log("Updating the holding");
+            const updatedHolding = await this.holdingService.updateHoldingExit(holding, tokensSold, holding.value_usd, holding.value_sol, solUsdValue, solReceived);
+            if (!updatedHolding) {
+                throw new common_1.BadRequestException('Failed to update holding on exit');
+            }
+            let deletedHolding = false;
+            if (updatedHolding.amount <= 0.0000001) {
+                await this.holdingService.deleteHolding(updatedHolding);
+                console.log("Holding deleted");
+                deletedHolding = true;
+            }
+            console.log("Updating user stats");
+            const totalWins = (await this.exitService.findAllExitWinsByUserId(userId)).length;
+            const updatedStats = await this.statService.updateStatOnExit(userStat, totalWins, parseFloat(realizedPnl.toFixed(4)), deletedHolding);
+            if (!updatedStats) {
+                throw new Error('Failed to update user stats');
+            }
+            await this.updateHoldingsPrice(userId);
+            const reFetchedStat = await this.statService.findStatByUserId(userId);
+            const tokenMetadata = await this.tokenMetadataService.findTokenDataByMintAddress(createExitDto.mintAddress);
+            console.log(`Updated stats: ${reFetchedStat.realized_pnl}, ${reFetchedStat.total_pnl}`);
+            console.log("Finalizing");
+            return {
+                exit: {
+                    id: exitRecord.id,
+                    mintAddress: exitRecord.mintAddress,
+                    amount: exitRecord.amount,
+                    value_usd: exitRecord.value_usd,
+                    value_sol: exitRecord.value_sol,
+                    price: exitRecord.price,
+                    marketcap: exitRecord.marketcap,
+                    liquidity: exitRecord.liquidity,
+                    pnl: exitRecord.pnl,
+                    createdAt: exitRecord.createdAt,
+                    updatedAt: exitRecord.updatedAt,
+                },
+                updatedHolding: updatedHolding?.id
+                    ? {
+                        id: updatedHolding.id,
+                        mintAddress: updatedHolding.mintAddress,
+                        amount: updatedHolding.amount,
+                        price: updatedHolding.price,
+                        average_price: updatedHolding.average_price,
+                        value_usd: updatedHolding.value_usd,
+                        value_sol: updatedHolding.value_sol,
+                        pnl: updatedHolding.pnl,
+                        createdAt: updatedHolding.createdAt,
+                        updatedAt: updatedHolding.updatedAt,
+                    }
+                    : null,
+                stats: {
+                    totalExits: reFetchedStat.total_exits,
+                    currentHoldings: reFetchedStat.current_holdings,
+                    totalPnl: reFetchedStat.total_pnl,
+                    realizedPnl: reFetchedStat.realized_pnl,
+                    winrate: reFetchedStat.winrate,
+                    createdAt: reFetchedStat.createdAt,
+                    updatedAt: reFetchedStat.updatedAt,
+                },
+                metadata: {
+                    name: tokenMetadata.name,
+                    image: tokenMetadata.image
+                },
+                newBalance: updatedBalance.balance,
+                newBalanceUsd: updatedBalance.balance_usd,
+            };
         }
-        const solReceived = parseFloat(tokenQuote.normalizedThresholdSol);
-        const solUsdValue = tokenQuote.usdValue;
-        console.log(`Sol received: ${solReceived}, solUsdValue: ${solUsdValue}`);
-        console.log(`Updating balance with the new values`);
-        const updatedBalance = await this.solBalanceService.updateBalanceAdd(balance, solReceived, solUsdValue);
-        if (!updatedBalance) {
-            throw new common_1.BadRequestException('Failed to update user balance');
+        catch (error) {
+            throw new Error(error);
         }
-        console.log(`Updated balance SOL: ${updatedBalance.balance}, USD: ${updatedBalance.balance_usd}`);
-        console.log("Fetching token data");
-        const tokenData = await this.solanaService.getTokenData(createExitDto.mintAddress);
-        if (!tokenData) {
-            throw new common_1.BadRequestException('Token not found');
-        }
-        console.log("Fetching the holding");
-        const holding = await this.holdingService.findHoldingByUserIdAndMintAddress(userId, createExitDto.mintAddress);
-        if (!holding) {
-            throw new common_1.BadRequestException('No existing holding found for this token. Cannot exit a position that does not exist.');
-        }
-        if (holding.amount < createExitDto.amount) {
-            throw new common_1.BadRequestException('Not enough tokens in holding to sell this amount');
-        }
-        const sellPrice = await this.solanaService.getTokenSellPrice(createExitDto.mintAddress);
-        if (!sellPrice) {
-            throw new common_1.BadRequestException('Failed to fetch token price for the minted token');
-        }
-        console.log(`The sell price of the token: ${sellPrice}`);
-        const currentAveragePrice = parseFloat(holding.average_price.toString()) || 0;
-        const tokensSold = parseFloat(createExitDto.amount.toString());
-        const realizedPnl = (sellPrice - currentAveragePrice) * tokensSold;
-        console.log(`currentAveragePrice: ${currentAveragePrice}, tokensSold: ${tokensSold}, realizedPnl: ${realizedPnl}`);
-        console.log("Creating an exit record");
-        const exitRecord = await this.exitService.createExit({
-            user,
-            mintAddress: createExitDto.mintAddress,
-            amount: tokensSold,
-            value_usd: solUsdValue,
-            value_sol: solReceived,
-            price: sellPrice,
-            marketcap: tokenData.marketCap,
-            liquidity: tokenData.liquidity.usd,
-            pnl: parseFloat(realizedPnl.toFixed(4)),
-        });
-        console.log("Updating the holding");
-        const updatedHolding = await this.holdingService.updateHoldingExit(holding, tokensSold, holding.value_usd, holding.value_sol, solUsdValue, solReceived);
-        if (!updatedHolding) {
-            throw new common_1.BadRequestException('Failed to update holding on exit');
-        }
-        let deletedHolding = false;
-        if (updatedHolding.amount <= 0.0000001) {
-            await this.holdingService.deleteHolding(updatedHolding);
-            console.log("Holding deleted");
-            deletedHolding = true;
-        }
-        console.log("Updating user stats");
-        const totalWins = (await this.exitService.findAllExitWinsByUserId(userId)).length;
-        const updatedStats = await this.statService.updateStatOnExit(userStat, totalWins, parseFloat(realizedPnl.toFixed(4)), deletedHolding);
-        if (!updatedStats) {
-            throw new Error('Failed to update user stats');
-        }
-        await this.updateHoldingsPrice(userId);
-        const reFetchedStat = await this.statService.findStatByUserId(userId);
-        const tokenMetadata = await this.tokenMetadataService.findTokenDataByMintAddress(createExitDto.mintAddress);
-        console.log(`Updated stats: ${reFetchedStat.realized_pnl}, ${reFetchedStat.total_pnl}`);
-        console.log("Finalizing");
-        return {
-            exit: {
-                id: exitRecord.id,
-                mintAddress: exitRecord.mintAddress,
-                amount: exitRecord.amount,
-                value_usd: exitRecord.value_usd,
-                value_sol: exitRecord.value_sol,
-                price: exitRecord.price,
-                marketcap: exitRecord.marketcap,
-                liquidity: exitRecord.liquidity,
-                pnl: exitRecord.pnl,
-                createdAt: exitRecord.createdAt,
-                updatedAt: exitRecord.updatedAt,
-            },
-            updatedHolding: updatedHolding?.id
-                ? {
-                    id: updatedHolding.id,
-                    mintAddress: updatedHolding.mintAddress,
-                    amount: updatedHolding.amount,
-                    price: updatedHolding.price,
-                    average_price: updatedHolding.average_price,
-                    value_usd: updatedHolding.value_usd,
-                    value_sol: updatedHolding.value_sol,
-                    pnl: updatedHolding.pnl,
-                    createdAt: updatedHolding.createdAt,
-                    updatedAt: updatedHolding.updatedAt,
-                }
-                : null,
-            stats: {
-                totalExits: reFetchedStat.total_exits,
-                currentHoldings: reFetchedStat.current_holdings,
-                totalPnl: reFetchedStat.total_pnl,
-                realizedPnl: reFetchedStat.realized_pnl,
-                winrate: reFetchedStat.winrate,
-                createdAt: reFetchedStat.createdAt,
-                updatedAt: reFetchedStat.updatedAt,
-            },
-            metadata: {
-                name: tokenMetadata.name,
-                image: tokenMetadata.image
-            },
-            newBalance: updatedBalance.balance,
-            newBalanceUsd: updatedBalance.balance_usd,
-        };
     }
     async createEntry(userId, createEntryDto) {
         console.log(`Validating user with ID ${userId}`);
@@ -184,121 +188,169 @@ let CryptoService = class CryptoService {
         if (userSolBalance < createEntryDto.amount) {
             throw new common_1.BadRequestException('Insufficient SOL balance');
         }
-        let localPrice = await this.solanaService.getTokenPrice(createEntryDto.mintAddress);
-        if (!localPrice || localPrice <= 0) {
-            for (let i = 1; i < 6; i++) {
-                localPrice = await this.solanaService.getTokenPrice(createEntryDto.mintAddress);
-                if (localPrice > 0)
-                    break;
+        try {
+            let localPrice = await this.solanaService.getTokenPrice(createEntryDto.mintAddress);
+            if (!localPrice || localPrice <= 0) {
+                for (let i = 1; i < 6; i++) {
+                    localPrice = await this.solanaService.getTokenPrice(createEntryDto.mintAddress);
+                    if (localPrice > 0)
+                        break;
+                }
             }
-        }
-        if (!localPrice || localPrice <= 0) {
-            throw new common_1.BadRequestException("Failed to fetch token price");
-        }
-        const tokenQuote = await this.solanaService.getTokenQuoteSolInput(createEntryDto.mintAddress, createEntryDto.amount, createEntryDto.slippage, localPrice);
-        if (!tokenQuote) {
-            throw new common_1.BadRequestException('Failed to fetch token quote');
-        }
-        const tokenData = await this.solanaService.getTokenData(createEntryDto.mintAddress);
-        if (!tokenData) {
-            throw new common_1.BadRequestException('Token not found');
-        }
-        const updatedBalance = await this.solBalanceService.updateBalanceSubtract(balance, createEntryDto.amount, solPrice);
-        if (!updatedBalance) {
-            throw new common_1.BadRequestException('Failed to update SOL balance. Please try again');
-        }
-        const amountOfTokensReceived = tokenQuote.normalizedThresholdToken;
-        const marketcap = parseFloat(tokenData.marketCap);
-        const liquidity = parseFloat(tokenData.liquidity.usd);
-        const value_usd = tokenQuote.usdValue;
-        const value_sol = tokenQuote.solValue;
-        const name = tokenData.quoteToken?.name || 'Unknown Token';
-        const ticker = tokenData.quoteToken?.symbol || 'Unknown Ticker';
-        const image = tokenData.info?.imageUrl || 'defaultTokenImage';
-        const website = tokenData.info?.websites?.[0]?.url || 'N/A';
-        const x_page = tokenData.info?.socials?.[0]?.url || 'N/A';
-        const telegram = tokenData.info?.socials?.[1]?.url || 'N/A';
-        const pnl = parseFloat(value_usd) - parseFloat(tokenQuote.inAmountUsdValue);
-        const holding = await this.holdingService.findHoldingByUserIdAndMintAddress(userId, createEntryDto.mintAddress);
-        let newHolding = false;
-        let uniqueUserToken = false;
-        let tokenSellPrice = 0;
-        const entries = await this.entryService.findEntriesByUserIdAndMintAddress(userId, createEntryDto.mintAddress);
-        if (entries.length === 0) {
-            uniqueUserToken = true;
-        }
-        if (!holding) {
-            newHolding = true;
-            try {
-                tokenSellPrice = await this.solanaService.getTokenSellPrice(createEntryDto.mintAddress);
+            if (!localPrice || localPrice <= 0) {
+                throw new Error("Failed to fetch token price");
             }
-            catch (error) {
-                console.log('No token liquidity or failed to fetch a token sell price');
+            console.log(`Local price in Entry for token: ${localPrice}`);
+            const tokenQuote = await this.solanaService.getTokenQuoteSolInput(createEntryDto.mintAddress, createEntryDto.amount, createEntryDto.slippage, localPrice);
+            if (!tokenQuote) {
+                throw new Error('Failed to fetch token quote');
             }
-            await this.holdingService.createHolding({
+            const tokenData = await this.solanaService.getTokenData(createEntryDto.mintAddress);
+            if (!tokenData) {
+                throw new common_1.BadRequestException('Token not found');
+            }
+            const amountOfTokensReceived = tokenQuote.normalizedThresholdToken;
+            const marketcap = parseFloat(tokenData.marketCap);
+            const liquidity = parseFloat(tokenData.liquidity.usd);
+            const value_usd = tokenQuote.usdValue;
+            const value_sol = tokenQuote.solValue;
+            const name = tokenData.quoteToken?.name || 'Unknown Token';
+            const ticker = tokenData.quoteToken?.symbol || 'Unknown Ticker';
+            const image = tokenData.info?.imageUrl || 'defaultTokenImage';
+            const website = tokenData.info?.websites?.[0]?.url || 'N/A';
+            const x_page = tokenData.info?.socials?.[0]?.url || 'N/A';
+            const telegram = tokenData.info?.socials?.[1]?.url || 'N/A';
+            const pnl = parseFloat(value_usd) - parseFloat(tokenQuote.inAmountUsdValue);
+            const holding = await this.holdingService.findHoldingByUserIdAndMintAddress(userId, createEntryDto.mintAddress);
+            let newHolding = false;
+            let uniqueUserToken = false;
+            let tokenSellPrice = 0;
+            const entries = await this.entryService.findEntriesByUserIdAndMintAddress(userId, createEntryDto.mintAddress);
+            if (entries.length === 0) {
+                uniqueUserToken = true;
+            }
+            if (!holding) {
+                newHolding = true;
+                try {
+                    const possiblePrice = await this.solanaService.getTokenSellPrice(createEntryDto.mintAddress);
+                    if (possiblePrice > 0) {
+                        tokenSellPrice = possiblePrice;
+                    }
+                    else {
+                        throw new Error('No valid price fetched');
+                    }
+                }
+                catch (error) {
+                    console.log(`No token liquidity or failed to fetch a token sell price${error}`);
+                    throw new Error('Failed to create an entry due to failed price');
+                }
+                await this.holdingService.createHolding({
+                    user,
+                    mintAddress: createEntryDto.mintAddress,
+                    amount: amountOfTokensReceived,
+                    price: tokenSellPrice,
+                    average_price: tokenSellPrice,
+                    value_usd,
+                    value_sol,
+                    pnl,
+                });
+            }
+            else {
+                try {
+                    const possiblePrice = await this.solanaService.getTokenSellPrice(createEntryDto.mintAddress);
+                    if (possiblePrice > 0) {
+                        tokenSellPrice = possiblePrice;
+                    }
+                    else {
+                        throw new Error("No valid price fetched'");
+                    }
+                }
+                catch (error) {
+                    throw new Error(`No token liquidity or failed to fetch a token sell price${error}`);
+                }
+                let updatedUsdValue = holding.value_usd;
+                let updatedSolValue = holding.value_sol;
+                if (holding.mintAddress && holding.amount >= 0.0001) {
+                    try {
+                        const tokenQuoteUpdate = await this.solanaService.getTokenQuoteSolOutput(holding.mintAddress, holding.amount, 50);
+                        if (tokenQuoteUpdate) {
+                            updatedUsdValue = parseFloat(tokenQuoteUpdate.usdValue);
+                            updatedSolValue = parseFloat(tokenQuoteUpdate.normalizedThresholdSol);
+                            console.log('Successfully updated from getTokenQuoteSolOutput for existing holding');
+                        }
+                    }
+                    catch (error) {
+                        throw new Error(`Failed to update token quote for entire holding, proceeding with current values:${error}`);
+                    }
+                }
+                else {
+                    if (!holding.mintAddress) {
+                        console.log('No mintAddress in holding, skipping getTokenQuoteSolOutput');
+                    }
+                    else {
+                        console.log('holding.amount < 0.0001, skipping getTokenQuoteSolOutput');
+                    }
+                }
+                const updatedHolding = await this.holdingService.updateHoldingEntry(holding, amountOfTokensReceived, tokenSellPrice, updatedUsdValue, updatedSolValue, parseFloat(value_usd), parseFloat(value_sol));
+                if (!updatedHolding) {
+                    throw new common_1.BadRequestException('Failed to update your holding, try again');
+                }
+            }
+            const updatedBalance = await this.solBalanceService.updateBalanceSubtract(balance, createEntryDto.amount, solPrice);
+            if (!updatedBalance) {
+                throw new common_1.BadRequestException('Failed to update SOL balance. Please try again');
+            }
+            const entry = await this.entryService.createEntry({
                 user,
                 mintAddress: createEntryDto.mintAddress,
                 amount: amountOfTokensReceived,
-                price: tokenSellPrice,
-                average_price: tokenSellPrice,
                 value_usd,
                 value_sol,
-                pnl,
+                price: localPrice,
+                marketcap,
+                liquidity,
+                source: createEntryDto.source,
             });
-        }
-        else {
-            try {
-                tokenSellPrice = await this.solanaService.getTokenSellPrice(createEntryDto.mintAddress);
+            const updatedStats = await this.statService.updateStatOnEntry(userStat, newHolding, uniqueUserToken);
+            if (!updatedStats) {
+                throw new Error('Failed to update user stats');
             }
-            catch (error) {
-                console.log('No token liquidity or failed to fetch a token sell price');
+            await this.updateHoldingsPrice(userId);
+            const existingMetadata = await this.tokenMetadataService.findTokenDataByMintAddress(createEntryDto.mintAddress);
+            if (existingMetadata) {
+                return {
+                    id: entry.id,
+                    solBalance: updatedBalance.balance,
+                    usdBalance: updatedBalance.balance_usd,
+                    mintAddress: entry.mintAddress,
+                    amount: entry.amount,
+                    value_usd: entry.value_usd,
+                    value_sol: entry.value_sol,
+                    inValueUsd: tokenQuote.inAmountUsdValue,
+                    pnl,
+                    price: entry.price,
+                    marketcap: entry.marketcap,
+                    liquidity: entry.liquidity,
+                    source: entry.source,
+                    name: existingMetadata.name,
+                    ticker: existingMetadata.ticker,
+                    image: existingMetadata.image,
+                    website: existingMetadata.website,
+                    x_page: existingMetadata.x_page,
+                    telegram: existingMetadata.telegram,
+                    createdAt: entry.createdAt,
+                    updatedAt: entry.updatedAt,
+                };
             }
-            let updatedUsdValue = holding.value_usd;
-            let updatedSolValue = holding.value_sol;
-            if (holding.mintAddress && holding.amount >= 0.0001) {
-                try {
-                    const tokenQuoteUpdate = await this.solanaService.getTokenQuoteSolOutput(holding.mintAddress, holding.amount, 50);
-                    if (tokenQuoteUpdate) {
-                        updatedUsdValue = parseFloat(tokenQuoteUpdate.usdValue);
-                        updatedSolValue = parseFloat(tokenQuoteUpdate.normalizedThresholdSol);
-                        console.log('Successfully updated from getTokenQuoteSolOutput for existing holding');
-                    }
-                }
-                catch (err) {
-                    console.log('Failed to update token quote for entire holding, proceeding with current values:', err.message);
-                }
-            }
-            else {
-                if (!holding.mintAddress) {
-                    console.log('No mintAddress in holding, skipping getTokenQuoteSolOutput');
-                }
-                else {
-                    console.log('holding.amount < 0.0001, skipping getTokenQuoteSolOutput');
-                }
-            }
-            const updatedHolding = await this.holdingService.updateHoldingEntry(holding, amountOfTokensReceived, tokenSellPrice, updatedUsdValue, updatedSolValue, parseFloat(value_usd), parseFloat(value_sol));
-            if (!updatedHolding) {
-                throw new common_1.BadRequestException('Failed to update your holding, try again');
-            }
-        }
-        const entry = await this.entryService.createEntry({
-            user,
-            mintAddress: createEntryDto.mintAddress,
-            amount: amountOfTokensReceived,
-            value_usd,
-            value_sol,
-            price: localPrice,
-            marketcap,
-            liquidity,
-            source: createEntryDto.source,
-        });
-        const updatedStats = await this.statService.updateStatOnEntry(userStat, newHolding, uniqueUserToken);
-        if (!updatedStats) {
-            throw new Error('Failed to update user stats');
-        }
-        await this.updateHoldingsPrice(userId);
-        const existingMetadata = await this.tokenMetadataService.findTokenDataByMintAddress(createEntryDto.mintAddress);
-        if (existingMetadata) {
+            const newMetadata = await this.tokenMetadataService.createTokenMetadata({
+                name,
+                ticker,
+                mint_address: createEntryDto.mintAddress,
+                image,
+                website,
+                x_page,
+                telegram,
+            });
             return {
                 id: entry.id,
                 solBalance: updatedBalance.balance,
@@ -313,50 +365,22 @@ let CryptoService = class CryptoService {
                 marketcap: entry.marketcap,
                 liquidity: entry.liquidity,
                 source: entry.source,
-                name: existingMetadata.name,
-                ticker: existingMetadata.ticker,
-                image: existingMetadata.image,
-                website: existingMetadata.website,
-                x_page: existingMetadata.x_page,
-                telegram: existingMetadata.telegram,
+                name: newMetadata.name,
+                ticker: newMetadata.ticker,
+                image: newMetadata.image,
+                website: newMetadata.website,
+                x_page: newMetadata.x_page,
+                telegram: newMetadata.telegram,
                 createdAt: entry.createdAt,
                 updatedAt: entry.updatedAt,
             };
         }
-        const newMetadata = await this.tokenMetadataService.createTokenMetadata({
-            name,
-            ticker,
-            mint_address: createEntryDto.mintAddress,
-            image,
-            website,
-            x_page,
-            telegram,
-        });
-        return {
-            id: entry.id,
-            solBalance: updatedBalance.balance,
-            usdBalance: updatedBalance.balance_usd,
-            mintAddress: entry.mintAddress,
-            amount: entry.amount,
-            value_usd: entry.value_usd,
-            value_sol: entry.value_sol,
-            inValueUsd: tokenQuote.inAmountUsdValue,
-            pnl,
-            price: entry.price,
-            marketcap: entry.marketcap,
-            liquidity: entry.liquidity,
-            source: entry.source,
-            name: newMetadata.name,
-            ticker: newMetadata.ticker,
-            image: newMetadata.image,
-            website: newMetadata.website,
-            x_page: newMetadata.x_page,
-            telegram: newMetadata.telegram,
-            createdAt: entry.createdAt,
-            updatedAt: entry.updatedAt,
-        };
+        catch (error) {
+            throw new Error(error);
+        }
     }
     async updateHoldingsPrice(userId) {
+        console.log("UpdateHoldingsPrice called");
         const userStat = await this.statService.findStatByUserId(userId);
         if (!userStat) {
             throw new common_1.BadRequestException('Failed to update user stats. Please try again');
@@ -375,8 +399,15 @@ let CryptoService = class CryptoService {
         let errors = [];
         await Promise.all(holdings.map(async (holding) => {
             let newPrice = holding.price;
+            console.log(`Holding price: ${newPrice}`);
             try {
-                newPrice = await this.solanaService.getTokenSellPrice(holding.mintAddress);
+                const possiblePrice = await this.solanaService.getTokenSellPrice(holding.mintAddress);
+                if (possiblePrice > 0) {
+                    newPrice = possiblePrice;
+                }
+                else {
+                    throw new Error('Failed to update holding. No possible price fetched');
+                }
             }
             catch (error) {
                 const errorMessage = `The token ${holding.mintAddress} has no liquidity or failed to fetch token price`;
@@ -392,6 +423,7 @@ let CryptoService = class CryptoService {
             const metadata = await this.tokenMetadataService.findTokenDataByMintAddress(item.mintAddress);
             return {
                 ...item,
+                group_id: item.group?.id || null,
                 name: metadata?.name || 'Unknown',
                 ticker: metadata?.ticker || 'Unknown',
                 image: metadata?.image || null,
@@ -417,12 +449,13 @@ let CryptoService = class CryptoService {
             const metadata = await this.tokenMetadataService.findTokenDataByMintAddress(item.mintAddress);
             return {
                 ...item,
+                group_id: item.group?.id || null,
                 name: metadata?.name || 'Unknown',
                 ticker: metadata?.ticker || 'Unknown',
                 image: metadata?.image || null,
                 website: metadata?.website || 'N/A',
                 xPage: metadata?.x_page || 'N/A',
-                telegram: metadata?.telegram || 'N/A'
+                telegram: metadata?.telegram || 'N/A',
             };
         }));
         const sanitizedData = enrichedData.map(({ id, user, ...rest }) => rest);

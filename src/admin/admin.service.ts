@@ -5,6 +5,7 @@ import { EntryService } from 'src/entries/entry.service';
 import { ExitService } from 'src/exits/exit.service';
 import { SolBalanceService } from 'src/balance/sol_balance.service';
 import { StatService } from 'src/stats/stats.service';
+import { GroupService } from 'src/groups/group.service';
 
 
 @Injectable()
@@ -16,6 +17,7 @@ export class AdminService {
         private readonly exitService: ExitService,
         private readonly solBalanceService: SolBalanceService,
         private readonly statService: StatService,
+        private readonly groupService: GroupService,
     ) {}
 
     async fetchAllUsers() {
@@ -84,6 +86,10 @@ export class AdminService {
     async fetchStatByUserId(userId: number) {
         const stats = await this.statService.findStatByUserId(userId);
         return stats;
+    }
+
+    async fetchAllGroups() {
+        const groups = await this.groupService.findAllGroups();
     }
 
     // Deletions

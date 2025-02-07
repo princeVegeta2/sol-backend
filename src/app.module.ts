@@ -11,6 +11,7 @@ import { SolBalanceModule } from './balance/sol_balance.module';
 import { StatModule } from './stats/stats.module';
 import { HealthModule } from './health/health.module';
 import { AdminModule } from './admin/admin.module';
+import { GroupModule } from './groups/group.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { join } from 'path';
@@ -30,6 +31,7 @@ import { join } from 'path';
     StatModule,
     HealthModule,
     AdminModule,
+    GroupModule,
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

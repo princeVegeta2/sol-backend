@@ -7,9 +7,10 @@ import { EntryModule } from "src/entries/entry.module";
 import { ExitModule } from "src/exits/exit.module";
 import { SolBalanceModule } from "src/balance/sol_balance.module";
 import { StatModule } from "src/stats/stats.module";
+import { GroupModule } from "src/groups/group.module";
 
 @Module({
-    imports: [UserModule, HoldingModule, EntryModule, ExitModule, SolBalanceModule, StatModule],
+    imports: [UserModule, HoldingModule, EntryModule, ExitModule, SolBalanceModule, StatModule, GroupModule],
     controllers: [AdminController],
     providers: [AdminService],
 })

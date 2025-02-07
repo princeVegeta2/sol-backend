@@ -8,6 +8,7 @@ export declare class AdminController {
     getAllExits(userId?: number, mintAddress?: string): Promise<import("../exits/exit.entity").Exit[]>;
     getAllBalances(userId?: number): Promise<void | import("../balance/sol_balance.entity").SolBalance[]>;
     getAllStats(userId?: number): Promise<import("../stats/stats.entity").Stat | import("../stats/stats.entity").Stat[]>;
+    getAllGroups(): Promise<void>;
     deleteHoldings(userId?: number, mintAddress?: string): Promise<void>;
     deleteEntries(userId?: number, mintAddress?: string): Promise<void>;
     deleteExits(userId?: number, mintAddress?: string): Promise<void>;

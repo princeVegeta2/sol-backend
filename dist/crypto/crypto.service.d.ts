@@ -86,6 +86,7 @@ export declare class CryptoService {
     }>;
     updateHoldingsPrice(userId: number): Promise<any[] | {
         holdings: {
+            group_id: number;
             name: string;
             ticker: string;
             image: string;
@@ -101,6 +102,7 @@ export declare class CryptoService {
             pnl: number;
             createdAt: Date;
             updatedAt: Date;
+            group: import("../groups/group.entity").Group;
         }[];
         errors: {
             mintAddress: string;
@@ -108,6 +110,7 @@ export declare class CryptoService {
         }[];
     }>;
     getAllUserHoldings(userId: number): Promise<{
+        group_id: number;
         name: string;
         ticker: string;
         image: string;
@@ -123,6 +126,7 @@ export declare class CryptoService {
         pnl: number;
         createdAt: Date;
         updatedAt: Date;
+        group: import("../groups/group.entity").Group;
     }[]>;
     getBalanceData(userId: number): Promise<{
         balance: number;

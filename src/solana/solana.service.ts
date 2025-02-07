@@ -362,7 +362,7 @@ export class SolanaService {
             // The "sellPrice" we want is typically at: `extraInfo.quotedPrice.sellPrice`
             const sellPriceStr = tokenData?.extraInfo?.quotedPrice?.sellPrice;
             if (!sellPriceStr) {
-                throw new BadRequestException("The token has no Liquidity and cannot be sold");
+                throw new Error("The token has no Liquidity and cannot be sold");
             }
 
             const sellPriceNum = parseFloat(sellPriceStr);
