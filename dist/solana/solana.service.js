@@ -29,7 +29,6 @@ let SolanaService = class SolanaService {
             const quoteResponse = await axios_1.default.get(jupApiUrl);
             const rawData = quoteResponse.data;
             const outAmountThresholdStr = rawData.otherAmountThreshold;
-            const swapUsdValueStr = rawData.swapUsdValue;
             if (!outAmountThresholdStr) {
                 throw new Error('No otherAmountThreshold in Jupiter response');
             }

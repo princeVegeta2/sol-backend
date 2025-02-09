@@ -71,7 +71,8 @@ let CryptoService = class CryptoService {
             if (holding.amount < createExitDto.amount) {
                 throw new common_1.BadRequestException('Not enough tokens in holding to sell this amount');
             }
-            const sellPrice = await this.solanaService.getTokenSellPrice(createExitDto.mintAddress);
+            const tokenPrice = tokenQuote.usdValue / createExitDto.amount;
+            const sellPrice = parseFloat(tokenPrice.toFixed(12));
             if (!sellPrice) {
                 throw new common_1.BadRequestException('Failed to fetch token price for the minted token');
             }

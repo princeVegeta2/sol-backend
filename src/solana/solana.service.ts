@@ -40,7 +40,6 @@ export class SolanaService {
             // - swapUsdValue: approximate final output's total USD
             //   (some tokens or some conditions might omit swapUsdValue, so handle carefully)
             const outAmountThresholdStr = rawData.otherAmountThreshold;
-            const swapUsdValueStr = rawData.swapUsdValue; // v6 sometimes has this
 
             if (!outAmountThresholdStr) {
                 throw new Error('No otherAmountThreshold in Jupiter response');
@@ -98,7 +97,7 @@ export class SolanaService {
     async getTokenQuoteSolOutput(
         inputMint: string,
         tokenAmount: number, // user-friendly decimal
-        slippage: number
+        slippage: number,
     ): Promise<any> {
 
         // Basic parameter checks, etc.

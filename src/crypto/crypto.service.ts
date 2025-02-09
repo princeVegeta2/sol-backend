@@ -86,13 +86,16 @@ export class CryptoService {
             }
 
             // 9. Compute realized PnL using average cost basis
-            const sellPrice = await this.solanaService.getTokenSellPrice(createExitDto.mintAddress);
+            // Changed sell price calculation needs testing
+            const tokenPrice = tokenQuote.usdValue / createExitDto.amount;
+            const sellPrice = parseFloat(tokenPrice.toFixed(12));
             if (!sellPrice) {
                 throw new BadRequestException('Failed to fetch token price for the minted token');
             }
             console.log(`The sell price of the token: ${sellPrice}`);
 
             const currentAveragePrice = parseFloat(holding.average_price.toString()) || 0;
+
             const tokensSold = parseFloat(createExitDto.amount.toString());
             // realizedPnL = (sellPrice - averagePrice) * tokensSold
             const realizedPnl = (sellPrice - currentAveragePrice) * tokensSold;
