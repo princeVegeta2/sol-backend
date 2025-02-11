@@ -57,19 +57,23 @@ export class GroupController {
     @UseGuards(JwtAuthGuard)
     @Post('create-group')
     async createUserGroup(@Request() req, @Body() createGroupDto: CreateGroupDto) {
+        if (createGroupDto.groupName === "All") {
+            throw new BadRequestException('Cannot create a group with that name');
+        }
         const userId = req.user.userId;
         const user = await this.userService.findUserById(userId);
         if (!user) {
+            console.log('User not found');
             throw new UnauthorizedException('User not found');
         }
         // Check if group name already exists for that user
         const groupExists = await this.groupService.findFullGroupByUserIdAndName(userId, createGroupDto.groupName);
         if (groupExists) {
+            console.log('Group exists');
             throw new BadRequestException('Group with that name already exists');
         }
-
         await this.groupService.createGroupForUser(user, createGroupDto.groupName);
-        const groupList = await this.groupService.findGroupsByUserId(userId);
+        const groupList = await this.groupService.findFullGroupsByUserId(userId);
         if (groupList.length === 0) {
             throw new BadRequestException('Failed to fetch groups, group created succesfully');
         }
@@ -102,8 +106,8 @@ export class GroupController {
     }
 
     @UseGuards(JwtAuthGuard)
-    @Delete('group-holding')
-    async deleteHoldingFromGroup(@Request() req, deleteHoldingDto: DeleteHoldingDto) {
+    @Post('delete-group-holding')
+    async deleteHoldingFromGroup(@Request() req, @Body() deleteHoldingDto: DeleteHoldingDto) {
         const userId = req.user.userId;
         if (!userId) {
             throw new UnauthorizedException('User not authorized');
@@ -112,19 +116,21 @@ export class GroupController {
         const holding = await this.holdingService.findHoldingByUserIdAndMintAddress(userId, deleteHoldingDto.mintAddress);
 
         await this.holdingService.deleteHoldingFromGroup(holding);
-        return { messsage: "Holding removed from the group" };
+        const updatedGroups = await this.groupService.findFullGroupsByUserId(userId);
+        return updatedGroups;
     }
 
     @UseGuards(JwtAuthGuard)
-    @Delete('group')
-    async deleteGroup(@Request() req, deleteGroupDto: DeleteGroupDto) {
+    @Post('delete-group')
+    async deleteGroup(@Request() req, @Body() deleteGroupDto: DeleteGroupDto) {
         const userId = req.user.userId;
         if (!userId) {
             throw new UnauthorizedException('User not authorized');
         }
         const group = await this.groupService.findFullGroupByUserIdAndName(userId, deleteGroupDto.groupName);
         await this.groupService.deleteGroup(group);
-        return { message: "Group deleted succesfully"};
+        const userGroups = await this.groupService.findFullGroupsByUserId(userId);
+        return userGroups;
     }
 
 }

@@ -52,17 +52,22 @@ let GroupController = class GroupController {
         return sanitizedData;
     }
     async createUserGroup(req, createGroupDto) {
+        if (createGroupDto.groupName === "All") {
+            throw new common_1.BadRequestException('Cannot create a group with that name');
+        }
         const userId = req.user.userId;
         const user = await this.userService.findUserById(userId);
         if (!user) {
+            console.log('User not found');
             throw new common_1.UnauthorizedException('User not found');
         }
         const groupExists = await this.groupService.findFullGroupByUserIdAndName(userId, createGroupDto.groupName);
         if (groupExists) {
+            console.log('Group exists');
             throw new common_1.BadRequestException('Group with that name already exists');
         }
         await this.groupService.createGroupForUser(user, createGroupDto.groupName);
-        const groupList = await this.groupService.findGroupsByUserId(userId);
+        const groupList = await this.groupService.findFullGroupsByUserId(userId);
         if (groupList.length === 0) {
             throw new common_1.BadRequestException('Failed to fetch groups, group created succesfully');
         }
@@ -94,7 +99,8 @@ let GroupController = class GroupController {
         const group = await this.groupService.findFullGroupByUserIdAndName(userId, deleteHoldingDto.groupName);
         const holding = await this.holdingService.findHoldingByUserIdAndMintAddress(userId, deleteHoldingDto.mintAddress);
         await this.holdingService.deleteHoldingFromGroup(holding);
-        return { messsage: "Holding removed from the group" };
+        const updatedGroups = await this.groupService.findFullGroupsByUserId(userId);
+        return updatedGroups;
     }
     async deleteGroup(req, deleteGroupDto) {
         const userId = req.user.userId;
@@ -103,7 +109,8 @@ let GroupController = class GroupController {
         }
         const group = await this.groupService.findFullGroupByUserIdAndName(userId, deleteGroupDto.groupName);
         await this.groupService.deleteGroup(group);
-        return { message: "Group deleted succesfully" };
+        const userGroups = await this.groupService.findFullGroupsByUserId(userId);
+        return userGroups;
     }
 };
 exports.GroupController = GroupController;
@@ -144,16 +151,18 @@ __decorate([
 ], GroupController.prototype, "addHoldingToGroup", null);
 __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
-    (0, common_1.Delete)('group-holding'),
+    (0, common_1.Post)('delete-group-holding'),
     __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object, delete_holding_dto_1.DeleteHoldingDto]),
     __metadata("design:returntype", Promise)
 ], GroupController.prototype, "deleteHoldingFromGroup", null);
 __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
-    (0, common_1.Delete)('group'),
+    (0, common_1.Post)('delete-group'),
     __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object, delete_group_dto_1.DeleteGroupDto]),
     __metadata("design:returntype", Promise)

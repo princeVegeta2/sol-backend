@@ -48,7 +48,7 @@ export class GroupService {
 
     async findFullGroupByUserIdAndName(userId: number, name: string): Promise<Group> {
         return this.groupRepository.findOne({
-            where: { user: { id: userId }},
+            where: { user: { id: userId }, name: name },
             relations: ["user"],
         });
     }

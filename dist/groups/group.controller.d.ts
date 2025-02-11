@@ -23,12 +23,8 @@ export declare class GroupController {
         updatedAt: Date;
         group: import("./group.entity").Group;
     }[]>;
-    createUserGroup(req: any, createGroupDto: CreateGroupDto): Promise<Partial<import("./group.entity").Group>[]>;
+    createUserGroup(req: any, createGroupDto: CreateGroupDto): Promise<import("./group.entity").Group[]>;
     addHoldingToGroup(req: any, addHoldingDto: AddHoldingDto): Promise<import("./group.entity").Group[]>;
-    deleteHoldingFromGroup(req: any, deleteHoldingDto: DeleteHoldingDto): Promise<{
-        messsage: string;
-    }>;
-    deleteGroup(req: any, deleteGroupDto: DeleteGroupDto): Promise<{
-        message: string;
-    }>;
+    deleteHoldingFromGroup(req: any, deleteHoldingDto: DeleteHoldingDto): Promise<import("./group.entity").Group[]>;
+    deleteGroup(req: any, deleteGroupDto: DeleteGroupDto): Promise<import("./group.entity").Group[]>;
 }

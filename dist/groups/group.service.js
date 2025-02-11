@@ -51,7 +51,7 @@ let GroupService = class GroupService {
     }
     async findFullGroupByUserIdAndName(userId, name) {
         return this.groupRepository.findOne({
-            where: { user: { id: userId } },
+            where: { user: { id: userId }, name: name },
             relations: ["user"],
         });
     }
