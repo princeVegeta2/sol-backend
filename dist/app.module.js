@@ -21,6 +21,11 @@ const stats_module_1 = require("./stats/stats.module");
 const health_module_1 = require("./health/health.module");
 const admin_module_1 = require("./admin/admin.module");
 const group_module_1 = require("./groups/group.module");
+const perps_module_1 = require("./perps/perps.module");
+const ape_entry_module_1 = require("./ape_entry/ape_entry.module");
+const ape_exit_module_1 = require("./ape_exit/ape_exit.module");
+const ape_holding_module_1 = require("./ape_holdings/ape_holding.module");
+const ape_module_1 = require("./ape/ape.module");
 const typeorm_1 = require("@nestjs/typeorm");
 const config_1 = require("@nestjs/config");
 const path_1 = require("path");
@@ -42,6 +47,11 @@ exports.AppModule = AppModule = __decorate([
             health_module_1.HealthModule,
             admin_module_1.AdminModule,
             group_module_1.GroupModule,
+            perps_module_1.PerpModule,
+            ape_entry_module_1.ApeEntryModule,
+            ape_exit_module_1.ApeExitModule,
+            ape_holding_module_1.ApeHoldingModule,
+            ape_module_1.ApeModule,
             typeorm_1.TypeOrmModule.forRootAsync({
                 imports: [config_1.ConfigModule],
                 inject: [config_1.ConfigService],

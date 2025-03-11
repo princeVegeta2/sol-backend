@@ -214,7 +214,7 @@ let SolanaService = class SolanaService {
             }
             const sellPriceStr = tokenData?.extraInfo?.quotedPrice?.sellPrice;
             if (!sellPriceStr) {
-                throw new Error("The token has no Liquidity and cannot be sold");
+                return 0;
             }
             const sellPriceNum = parseFloat(sellPriceStr);
             if (isNaN(sellPriceNum)) {
@@ -283,6 +283,15 @@ let SolanaService = class SolanaService {
             console.error('Error fetching token supply:', error.message);
             throw new Error('Failed to fetch token supply');
         }
+    }
+    async getTokenMeta(mintAddress) {
+        const res = await axios_1.default.get(`https://api.jup.ag/tokens/v1/token/${mintAddress}`);
+        return ({
+            name: res.data.name,
+            symbol: res.data.symbol,
+            decimals: res.data.decimals,
+            image: res.data.logoURI,
+        });
     }
 };
 exports.SolanaService = SolanaService;

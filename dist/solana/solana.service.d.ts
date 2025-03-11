@@ -13,4 +13,10 @@ export declare class SolanaService {
     getTokenSellPrice(mintAddress: string): Promise<number>;
     private getTokenMetadata;
     getTokenDecimals(mintAddress: string): Promise<any>;
+    getTokenMeta(mintAddress: string): Promise<{
+        name: any;
+        symbol: any;
+        decimals: any;
+        image: any;
+    }>;
 }

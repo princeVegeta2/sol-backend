@@ -12,6 +12,11 @@ import { StatModule } from './stats/stats.module';
 import { HealthModule } from './health/health.module';
 import { AdminModule } from './admin/admin.module';
 import { GroupModule } from './groups/group.module';
+import { PerpModule } from './perps/perps.module';
+import { ApeEntryModule } from './ape_entry/ape_entry.module';
+import { ApeExitModule } from './ape_exit/ape_exit.module';
+import { ApeHoldingModule } from './ape_holdings/ape_holding.module';
+import { ApeModule } from './ape/ape.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { join } from 'path';
@@ -32,6 +37,11 @@ import { join } from 'path';
     HealthModule,
     AdminModule,
     GroupModule,
+    PerpModule,
+    ApeEntryModule,
+    ApeExitModule,
+    ApeHoldingModule,
+    ApeModule,
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

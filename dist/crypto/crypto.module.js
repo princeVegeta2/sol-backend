@@ -18,12 +18,13 @@ const token_metadata_module_1 = require("../metadata/token_metadata.module");
 const exit_module_1 = require("../exits/exit.module");
 const sol_balance_module_1 = require("../balance/sol_balance.module");
 const stats_module_1 = require("../stats/stats.module");
+const ape_holding_module_1 = require("../ape_holdings/ape_holding.module");
 let CryptoModule = class CryptoModule {
 };
 exports.CryptoModule = CryptoModule;
 exports.CryptoModule = CryptoModule = __decorate([
     (0, common_1.Module)({
-        imports: [solana_module_1.SolanaModule, entry_module_1.EntryModule, user_module_1.UserModule, holding_module_1.HoldingModule, token_metadata_module_1.TokenMetadataModule, exit_module_1.ExitModule, sol_balance_module_1.SolBalanceModule, stats_module_1.StatModule],
+        imports: [solana_module_1.SolanaModule, entry_module_1.EntryModule, user_module_1.UserModule, holding_module_1.HoldingModule, token_metadata_module_1.TokenMetadataModule, exit_module_1.ExitModule, sol_balance_module_1.SolBalanceModule, stats_module_1.StatModule, ape_holding_module_1.ApeHoldingModule],
         controllers: [crypto_controller_1.CryptoController],
         providers: [crypto_service_1.CryptoService],
         exports: [crypto_service_1.CryptoService],

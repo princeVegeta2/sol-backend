@@ -8,6 +8,7 @@ import { ExitService } from 'src/exits/exit.service';
 import { CreateExitDto } from 'src/exits/exit.dto';
 import { SolBalanceService } from 'src/balance/sol_balance.service';
 import { StatService } from 'src/stats/stats.service';
+import { ApeHoldingService } from 'src/ape_holdings/ape_holding.service';
 export declare class CryptoService {
     private readonly solanaService;
     private readonly entryService;
@@ -17,8 +18,9 @@ export declare class CryptoService {
     private readonly exitService;
     private readonly solBalanceService;
     private readonly statService;
+    private readonly apeHoldingService;
     private readonly solMint;
-    constructor(solanaService: SolanaService, entryService: EntryService, userService: UserService, holdingService: HoldingService, tokenMetadataService: TokenMetadataService, exitService: ExitService, solBalanceService: SolBalanceService, statService: StatService);
+    constructor(solanaService: SolanaService, entryService: EntryService, userService: UserService, holdingService: HoldingService, tokenMetadataService: TokenMetadataService, exitService: ExitService, solBalanceService: SolBalanceService, statService: StatService, apeHoldingService: ApeHoldingService);
     createExit(userId: number, createExitDto: CreateExitDto): Promise<{
         exit: {
             id: number;

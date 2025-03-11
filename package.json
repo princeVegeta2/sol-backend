@@ -28,7 +28,9 @@
     "@nestjs/jwt": "^10.2.0",
     "@nestjs/passport": "^10.0.3",
     "@nestjs/platform-express": "^10.0.0",
+    "@nestjs/platform-socket.io": "^10.4.15",
     "@nestjs/typeorm": "^10.0.2",
+    "@nestjs/websockets": "^10.4.15",
     "@solana/web3.js": "^1.98.0",
     "bcrypt": "^5.1.1",
     "bs58": "^6.0.0",
@@ -40,6 +42,7 @@
     "pg": "^8.13.1",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.1",
+    "socket.io": "^4.8.1",
     "sol-backend": "file:",
     "typeorm": "^0.3.20"
   },

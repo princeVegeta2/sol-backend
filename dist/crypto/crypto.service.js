@@ -19,8 +19,9 @@ const token_metadata_service_1 = require("../metadata/token_metadata.service");
 const exit_service_1 = require("../exits/exit.service");
 const sol_balance_service_1 = require("../balance/sol_balance.service");
 const stats_service_1 = require("../stats/stats.service");
+const ape_holding_service_1 = require("../ape_holdings/ape_holding.service");
 let CryptoService = class CryptoService {
-    constructor(solanaService, entryService, userService, holdingService, tokenMetadataService, exitService, solBalanceService, statService) {
+    constructor(solanaService, entryService, userService, holdingService, tokenMetadataService, exitService, solBalanceService, statService, apeHoldingService) {
         this.solanaService = solanaService;
         this.entryService = entryService;
         this.userService = userService;
@@ -29,6 +30,7 @@ let CryptoService = class CryptoService {
         this.exitService = exitService;
         this.solBalanceService = solBalanceService;
         this.statService = statService;
+        this.apeHoldingService = apeHoldingService;
         this.solMint = 'So11111111111111111111111111111111111111112';
     }
     async createExit(userId, createExitDto) {
@@ -550,14 +552,15 @@ let CryptoService = class CryptoService {
     }
     async calculateNetworth(userId) {
         const { holdingsSolValue, holdingsUsdValue } = await this.holdingService.calculateHoldingsValueByUserId(userId);
+        const { apeHoldingsSolValue, apeHoldingsUsdValue } = await this.apeHoldingService.calculateApeHoldingsValueByUserId(userId);
         const solPrice = await this.solanaService.getTokenSellPrice(this.solMint);
         const balanceData = await this.solBalanceService.getBalanceDataByUserId(userId, solPrice);
         const solBalance = typeof balanceData.balance === 'string' ? parseFloat(balanceData.balance) : balanceData.balance;
         const usdBalance = typeof balanceData.balance_usd === 'string' ? parseFloat(balanceData.balance_usd) : balanceData.balance_usd;
         const roundedSolBalance = parseFloat(solBalance.toFixed(4));
         const roundedUsdBalance = parseFloat(usdBalance.toFixed(4));
-        const totalNetworthSol = holdingsSolValue + roundedSolBalance;
-        const totalNetworthUsd = holdingsUsdValue + roundedUsdBalance;
+        const totalNetworthSol = holdingsSolValue + apeHoldingsSolValue + roundedSolBalance;
+        const totalNetworthUsd = holdingsUsdValue + apeHoldingsUsdValue + roundedUsdBalance;
         const roundedNetworthSol = parseFloat(totalNetworthSol.toFixed(4));
         const roundedNetworthUsd = parseFloat(totalNetworthUsd.toFixed(4));
         return ({
@@ -576,6 +579,7 @@ exports.CryptoService = CryptoService = __decorate([
         token_metadata_service_1.TokenMetadataService,
         exit_service_1.ExitService,
         sol_balance_service_1.SolBalanceService,
-        stats_service_1.StatService])
+        stats_service_1.StatService,
+        ape_holding_service_1.ApeHoldingService])
 ], CryptoService);
 //# sourceMappingURL=crypto.service.js.map
