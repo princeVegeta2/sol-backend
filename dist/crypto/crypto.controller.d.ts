@@ -8,9 +8,16 @@ export declare class CryptoController {
     private readonly cryptoService;
     private readonly solBalanceService;
     constructor(solanaService: SolanaService, cryptoService: CryptoService, solBalanceService: SolBalanceService);
+    testPrice(mintAddress: string): Promise<any>;
     getTokenQuote(outputMint: string, amount: string, slippage: string): Promise<any>;
     getSolQuote(outputMint: string, amount: string, slippage: string): Promise<any>;
     getTokenData(mintAddress: string): Promise<any>;
+    getTokenMetadata(mintAddress: string): Promise<{
+        name: any;
+        symbol: any;
+        decimals: any;
+        image: any;
+    }>;
     getTokenPrice(mintAddress: string): Promise<number>;
     getTokenSellPrice(mintAddress: string): Promise<number>;
     getBulkTokenData(mintAddresses: string[]): Promise<any[]>;

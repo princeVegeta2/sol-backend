@@ -5,6 +5,7 @@ import { CreateExitDto } from 'src/exits/exit.dto';
 import { CryptoService } from './crypto.service';
 import { SolBalanceService } from 'src/balance/sol_balance.service';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+import axios from 'axios';
 
 @Controller('crypto')
 export class CryptoController {
@@ -13,25 +14,34 @@ export class CryptoController {
     private readonly cryptoService: CryptoService,
     private readonly solBalanceService: SolBalanceService) { }
 
-    @Get('token-quote')
-    async getTokenQuote(
-      @Query('outputMint') outputMint: string,
-      @Query('amount') amount: string,
-      @Query('slippage') slippage: string,
-    ) {
-      const numericAmount = parseFloat(amount); // Convert amount to a floating-point number
-      const numericSlippage = parseInt(slippage, 10); // Slippage as an integer
-    
-      if (isNaN(numericAmount) || numericAmount <= 0) {
-        throw new BadRequestException('Invalid amount parameter');
-      }
-      if (isNaN(numericSlippage) || numericSlippage <= 0) {
-        throw new BadRequestException('Invalid slippage parameter');
-      }
-    
-      return this.solanaService.getTokenQuoteSolInputTest(outputMint, numericAmount, numericSlippage);
+
+  @Get('test-price')
+  async testPrice(
+    @Query('mintAddress') mintAddress: string
+  ) {
+    const jupApiUrl = `https://api.jup.ag/price/v2?ids=${mintAddress.trim()},So11111111111111111111111111111111111111112&showExtraInfo=true`;
+    const response = await axios.get(jupApiUrl);
+    return response.data;
+  }
+  @Get('token-quote')
+  async getTokenQuote(
+    @Query('outputMint') outputMint: string,
+    @Query('amount') amount: string,
+    @Query('slippage') slippage: string,
+  ) {
+    const numericAmount = parseFloat(amount); // Convert amount to a floating-point number
+    const numericSlippage = parseInt(slippage, 10); // Slippage as an integer
+
+    if (isNaN(numericAmount) || numericAmount <= 0) {
+      throw new BadRequestException('Invalid amount parameter');
     }
-    
+    if (isNaN(numericSlippage) || numericSlippage <= 0) {
+      throw new BadRequestException('Invalid slippage parameter');
+    }
+
+    return this.solanaService.getTokenQuoteSolInputTest(outputMint, numericAmount, numericSlippage);
+  }
+
 
   @Get('sol-quote')
   async getSolQuote(
@@ -52,6 +62,11 @@ export class CryptoController {
   async getTokenData(@Query('mintAddress') mintAddress: string) {
     // Call the service to fetch token data
     return this.solanaService.getTokenData(mintAddress);
+  }
+
+  @Get('metadata')
+  async getTokenMetadata(@Query('mintAddress') mintAddress: string) {
+    return this.solanaService.getTokenMeta(mintAddress);
   }
 
   @Get('token-price')

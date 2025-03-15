@@ -46,7 +46,7 @@ let ApeService = class ApeService {
             throw new common_1.BadRequestException("Failed to create entry. Balance not found");
         }
         try {
-            let localPrice = await this.solanaService.getTokenSellPrice(createApeEntryDto.mintAddress);
+            let localPrice = await this.solanaService.getTokenPrice(createApeEntryDto.mintAddress);
             if (!localPrice || localPrice <= 0) {
                 for (let i = 0; i < 6; i++) {
                     localPrice = await this.solanaService.getTokenPrice(createApeEntryDto.mintAddress);
@@ -61,13 +61,19 @@ let ApeService = class ApeService {
             if (!tokenQuote) {
                 throw new Error("Failed to get a quote for this token.");
             }
-            const tokenMetadata = await this.solanaService.getTokenMeta(createApeEntryDto.mintAddress);
+            console.log("Fetching token metadata...");
+            const tokenMetadata = await this.solanaService.getTokenMeta(createApeEntryDto.mintAddress)
+                .catch(error => {
+                console.error("Failed to fetch metadata, using default values:", error);
+                return null;
+            });
+            console.log(`Token metadata is ${tokenMetadata?.name}`);
             const amountOfTokensReceived = tokenQuote.normalizedThresholdToken;
             const valueUsd = tokenQuote.usdValue;
             const valueSol = tokenQuote.solValue;
-            const name = tokenMetadata.name;
-            const ticker = tokenMetadata.symbol;
-            const image = tokenMetadata.image;
+            const name = tokenMetadata?.name ?? "N/A";
+            const ticker = tokenMetadata?.symbol ?? "N/A";
+            const image = tokenMetadata?.image ?? "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR2gON53SU6YuM98Z1867Yn63flCGGDnC7mIw&s";
             const pnl = parseFloat(valueUsd) - parseFloat(tokenQuote.inAmountUsdValue);
             const holding = await this.apeHoldingService.findApeHoldingByUserIdAndMintAddress(userId, createApeEntryDto.mintAddress);
             let newHolding = false;
@@ -106,7 +112,7 @@ let ApeService = class ApeService {
             else {
                 try {
                     console.log("Getting possible price");
-                    const possiblePrice = await this.solanaService.getTokenSellPrice(createApeEntryDto.mintAddress);
+                    const possiblePrice = await this.solanaService.getTokenPrice(createApeEntryDto.mintAddress);
                     if (possiblePrice > 0) {
                         tokenPrice = possiblePrice;
                     }
@@ -160,7 +166,7 @@ let ApeService = class ApeService {
             if (!updatedStats) {
                 throw new Error('Failed to update user stats');
             }
-            await this.updateApeHoldingsPrice(userId);
+            console.log("Fetching existing metadata...");
             const existingMetadata = await this.tokenMetadataService.findTokenDataByMintAddress(createApeEntryDto.mintAddress);
             if (existingMetadata) {
                 console.log("Metadata exists, returning values");
@@ -182,6 +188,7 @@ let ApeService = class ApeService {
                     updatedAt: entry.updatedAt,
                 };
             }
+            console.log(`Creating metadata: ${name}, ${ticker}, ${image}`);
             const newMetadata = await this.tokenMetadataService.createTokenMetadata({
                 name,
                 ticker,
@@ -338,6 +345,7 @@ let ApeService = class ApeService {
             throw new common_1.BadRequestException('Failed to update user stats. Please try again');
         }
         const holdings = await this.apeHoldingService.findApeHoldingsByUserId(userId);
+        console.log(`UserID: ${userId}`);
         if (!holdings || holdings.length === 0) {
             console.log(`User ${userId} has 0 holdings => set unrealizedPnl to 0`);
             await this.statService.updateStatOnHoldingUpdate(userStat, 0);
@@ -351,15 +359,23 @@ let ApeService = class ApeService {
         let errors = [];
         await Promise.all(holdings.map(async (holding) => {
             let newPrice = holding.price;
-            console.log(`Holding price: ${newPrice}`);
+            console.log(`Mint address: ${holding.mintAddress}`);
+            const metadata = await this.tokenMetadataService.findTokenDataByMintAddress(holding.mintAddress);
+            if (metadata.name === "N/A") {
+                const newMetadata = await this.solanaService.getTokenMeta(holding.mintAddress)
+                    .catch(error => {
+                    console.error("Failed to fetch metadata on holding update");
+                });
+                if (newMetadata) {
+                    await this.tokenMetadataService.updateTokenMetadata(newMetadata.symbol, newMetadata.name, newMetadata.image, metadata)
+                        .catch(error => {
+                        console.error("Failed to update metadata on holding update");
+                    });
+                }
+            }
             try {
-                const possiblePrice = await this.solanaService.getTokenSellPrice(holding.mintAddress);
-                if (possiblePrice > 0) {
-                    newPrice = possiblePrice;
-                }
-                else {
-                    throw new Error('Failed to update holding. No possible price fetched');
-                }
+                const possiblePrice = await this.solanaService.getTokenPrice(holding.mintAddress);
+                newPrice = possiblePrice;
             }
             catch (error) {
                 const errorMessage = `The token ${holding.mintAddress} has no liquidity or failed to fetch token price`;

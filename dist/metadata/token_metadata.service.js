@@ -28,6 +28,15 @@ let TokenMetadataService = class TokenMetadataService {
     async findTokenDataByMintAddress(mintAddress) {
         return this.tokenMetadataRepository.findOne({ where: { mint_address: mintAddress } });
     }
+    async updateTokenMetadata(ticker, name, image, metadata) {
+        if (!metadata) {
+            throw new Error("Token metadata not found.");
+        }
+        metadata.ticker = ticker;
+        metadata.name = name;
+        metadata.image = image;
+        return this.tokenMetadataRepository.save(metadata);
+    }
 };
 exports.TokenMetadataService = TokenMetadataService;
 exports.TokenMetadataService = TokenMetadataService = __decorate([

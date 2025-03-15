@@ -27,4 +27,22 @@ export class TokenMetadataService {
     async findTokenDataByMintAddress(mintAddress: string): Promise<TokenMetadata> {
         return this.tokenMetadataRepository.findOne({where: { mint_address: mintAddress }});
     }
+
+    async updateTokenMetadata(
+        ticker: string, 
+        name: string, 
+        image: string, 
+        metadata: TokenMetadata
+    ): Promise<TokenMetadata> {
+        if (!metadata) {
+            throw new Error("Token metadata not found.");
+        }
+        // Update fields
+        metadata.ticker = ticker;
+        metadata.name = name;
+        metadata.image = image;
+
+        // Save the updated metadata
+        return this.tokenMetadataRepository.save(metadata);
+    }
 }

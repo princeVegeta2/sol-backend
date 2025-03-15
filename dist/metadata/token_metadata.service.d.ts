@@ -13,4 +13,5 @@ export declare class TokenMetadataService {
         telegram?: string;
     }): Promise<TokenMetadata>;
     findTokenDataByMintAddress(mintAddress: string): Promise<TokenMetadata>;
+    updateTokenMetadata(ticker: string, name: string, image: string, metadata: TokenMetadata): Promise<TokenMetadata>;
 }

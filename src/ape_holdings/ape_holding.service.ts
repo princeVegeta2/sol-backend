@@ -26,14 +26,17 @@ export class ApeHoldingService {
     }
 
     async findApeHoldingsByUserId(userId: number): Promise<ApeHolding[] | null> {
-        const query = `
-            SELECT * 
-            FROM ape_holdings
-            WHERE user_id = $1
-        `;
-        const result = await this.apeHoldingRepository.query(query, [userId]);
+        const result = await this.apeHoldingRepository.find({
+            where: { user: { id: userId } }, // TypeORM automatically joins user_id
+        });
+    
+        result.forEach((holding) => {
+            console.log(`Holding ${holding.mintAddress} fetched`); // Will now work
+        });
         return result;
     }
+    
+    
 
     async findApeHoldingByUserIdAndMintAddress(userId: number, mintAddress: string): Promise<ApeHolding | null> {
         const query = `

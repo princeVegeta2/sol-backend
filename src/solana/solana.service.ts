@@ -343,6 +343,7 @@ export class SolanaService {
         }
     }
 
+
     async getTokenSellPrice(mintAddress: string): Promise<number> {
         try {
             const jupApiUrl = `https://api.jup.ag/price/v2?ids=${mintAddress.trim()},So11111111111111111111111111111111111111112&showExtraInfo=true`;
@@ -444,12 +445,18 @@ export class SolanaService {
     }
 
     async getTokenMeta(mintAddress: string) {
-        const res = await axios.get(`https://api.jup.ag/tokens/v1/token/${mintAddress}`);
-        return({
-            name: res.data.name,
-            symbol: res.data.symbol,
-            decimals: res.data.decimals,
-            image: res.data.logoURI,
-        });
+        try {
+            const res = await axios.get(`https://api.jup.ag/tokens/v1/token/${mintAddress}`);
+            return {
+                name: res.data.name,
+                symbol: res.data.symbol,
+                decimals: res.data.decimals,
+                image: res.data.logoURI,
+            };
+        } catch (error) {
+            console.error("Jupiter API Error:", error.response?.status, error.response?.data);
+            throw new Error(`Jupiter API Request Failed: ${error.message}`);
+        }
     }
+    
 }

@@ -26,12 +26,12 @@ let ApeHoldingService = class ApeHoldingService {
         return this.apeHoldingRepository.save(newApeHolding);
     }
     async findApeHoldingsByUserId(userId) {
-        const query = `
-            SELECT * 
-            FROM ape_holdings
-            WHERE user_id = $1
-        `;
-        const result = await this.apeHoldingRepository.query(query, [userId]);
+        const result = await this.apeHoldingRepository.find({
+            where: { user: { id: userId } },
+        });
+        result.forEach((holding) => {
+            console.log(`Holding ${holding.mintAddress} fetched`);
+        });
         return result;
     }
     async findApeHoldingByUserIdAndMintAddress(userId, mintAddress) {

@@ -20,11 +20,17 @@ const exit_dto_1 = require("../exits/exit.dto");
 const crypto_service_1 = require("./crypto.service");
 const sol_balance_service_1 = require("../balance/sol_balance.service");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
+const axios_1 = require("axios");
 let CryptoController = class CryptoController {
     constructor(solanaService, cryptoService, solBalanceService) {
         this.solanaService = solanaService;
         this.cryptoService = cryptoService;
         this.solBalanceService = solBalanceService;
+    }
+    async testPrice(mintAddress) {
+        const jupApiUrl = `https://api.jup.ag/price/v2?ids=${mintAddress.trim()},So11111111111111111111111111111111111111112&showExtraInfo=true`;
+        const response = await axios_1.default.get(jupApiUrl);
+        return response.data;
     }
     async getTokenQuote(outputMint, amount, slippage) {
         const numericAmount = parseFloat(amount);
@@ -47,6 +53,9 @@ let CryptoController = class CryptoController {
     }
     async getTokenData(mintAddress) {
         return this.solanaService.getTokenData(mintAddress);
+    }
+    async getTokenMetadata(mintAddress) {
+        return this.solanaService.getTokenMeta(mintAddress);
     }
     async getTokenPrice(mintAddress) {
         return this.solanaService.getTokenPrice(mintAddress);
@@ -154,6 +163,13 @@ let CryptoController = class CryptoController {
 };
 exports.CryptoController = CryptoController;
 __decorate([
+    (0, common_1.Get)('test-price'),
+    __param(0, (0, common_1.Query)('mintAddress')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], CryptoController.prototype, "testPrice", null);
+__decorate([
     (0, common_1.Get)('token-quote'),
     __param(0, (0, common_1.Query)('outputMint')),
     __param(1, (0, common_1.Query)('amount')),
@@ -178,6 +194,13 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
 ], CryptoController.prototype, "getTokenData", null);
+__decorate([
+    (0, common_1.Get)('metadata'),
+    __param(0, (0, common_1.Query)('mintAddress')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], CryptoController.prototype, "getTokenMetadata", null);
 __decorate([
     (0, common_1.Get)('token-price'),
     __param(0, (0, common_1.Query)('mintAddress')),

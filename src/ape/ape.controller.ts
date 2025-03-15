@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, UseGuards, Request, Body, UnauthorizedException, BadRequestException} from "@nestjs/common";
+import { Controller, Get, Post, Query, UseGuards, Request, Body, UnauthorizedException, BadRequestException} from "@nestjs/common";
 import { ApeService } from "./ape.service";
 import { JwtAuthGuard } from "src/auth/jwt-auth.guard";
 import { CreateApeEntryDto } from "src/ape_entry/ape_entry.dto";
@@ -34,5 +34,15 @@ export class ApeController {
             throw new BadRequestException("Amount must be larger than 0");
         }
         return this.apeService.createApeExit(userId, createApeExitDto);
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Get('update-ape-holdings')
+    async updateApeHoldings(@Request() req) {
+        const userId = req.user.userId;
+        if (!userId) {
+            throw new UnauthorizedException("User ID not found");
+        }
+        return this.apeService.updateApeHoldingsPrice(userId);
     }
 }
