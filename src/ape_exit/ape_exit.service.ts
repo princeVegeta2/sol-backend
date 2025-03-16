@@ -71,6 +71,15 @@ export class ApeExitService {
         return this.apeExitRepository.find();
     }
 
+    async findAllApeExitsByUserId(userId: number): Promise<ApeExit[]> {
+        const exits = await this.apeExitRepository.find({
+            where: { user: { id: userId } },
+            // you can also specify relations if needed: relations: ['user'],
+          });
+        
+        return exits;
+    }
+
     async deleteApeExit(apeExit: ApeExit): Promise<void> {
         await this.apeExitRepository.remove(apeExit);
     }

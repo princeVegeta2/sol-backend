@@ -78,51 +78,24 @@ let ApeService = class ApeService {
             const holding = await this.apeHoldingService.findApeHoldingByUserIdAndMintAddress(userId, createApeEntryDto.mintAddress);
             let newHolding = false;
             let uniqueToken = false;
-            let tokenPrice = 0;
             const entries = await this.apeEntryService.findAllApeEntriesByUserIdAndMintAddress(userId, createApeEntryDto.mintAddress);
             if (entries.length === 0) {
                 uniqueToken = true;
             }
             if (!holding) {
                 newHolding = true;
-                try {
-                    console.log("Getting possible price");
-                    const possiblePrice = await this.solanaService.getTokenPrice(createApeEntryDto.mintAddress);
-                    if (possiblePrice > 0) {
-                        tokenPrice = possiblePrice;
-                    }
-                    else {
-                        throw new Error("No valid price fetched on ape entry");
-                    }
-                }
-                catch (error) {
-                    throw new Error("Failed to create an entry due to failed price fetch");
-                }
                 await this.apeHoldingService.createApeHolding({
                     user,
                     mintAddress: createApeEntryDto.mintAddress,
                     amount: amountOfTokensReceived,
-                    price: tokenPrice,
-                    average_price: tokenPrice,
+                    price: localPrice,
+                    average_price: localPrice,
                     value_usd: valueUsd,
                     value_sol: valueSol,
                     pnl
                 });
             }
             else {
-                try {
-                    console.log("Getting possible price");
-                    const possiblePrice = await this.solanaService.getTokenPrice(createApeEntryDto.mintAddress);
-                    if (possiblePrice > 0) {
-                        tokenPrice = possiblePrice;
-                    }
-                    else {
-                        tokenPrice = 0;
-                    }
-                }
-                catch (error) {
-                    throw new Error(`No token liquidity or failed to fetch a token sell price${error}`);
-                }
                 let updatedUsdValue = holding.value_usd;
                 let updatedSolValue = holding.value_sol;
                 if (holding.mintAddress && holding.amount >= 0.0001) {
@@ -145,7 +118,7 @@ let ApeService = class ApeService {
                         console.log('holding.amount < 0.0001, skipping getTokenQuoteSolOutput');
                     }
                 }
-                const updatedApeHolding = await this.apeHoldingService.updateApeHoldingEntry(holding, amountOfTokensReceived, tokenPrice, updatedUsdValue, updatedSolValue, parseFloat(valueUsd), parseFloat(valueSol));
+                const updatedApeHolding = await this.apeHoldingService.updateApeHoldingEntry(holding, amountOfTokensReceived, localPrice, updatedUsdValue, updatedSolValue, parseFloat(valueUsd), parseFloat(valueSol));
                 if (!updatedApeHolding) {
                     throw new common_1.BadRequestException('Failed to update your holding, try again');
                 }
@@ -349,7 +322,7 @@ let ApeService = class ApeService {
         if (!holdings || holdings.length === 0) {
             console.log(`User ${userId} has 0 holdings => set unrealizedPnl to 0`);
             await this.statService.updateStatOnHoldingUpdate(userStat, 0);
-            return [];
+            return { holdings: [], errors: [] };
         }
         const solPrice = await this.solanaService.getTokenPrice(this.solMint);
         if (!solPrice) {
@@ -420,6 +393,16 @@ let ApeService = class ApeService {
         }));
         const sanitizedData = enrichedData.map(({ id, user, ...rest }) => rest);
         return sanitizedData;
+    }
+    async getUserApeHistory(userId) {
+        const entries = await this.apeEntryService.findAllApeEntriesByUserId(userId);
+        const exits = await this.apeExitService.findAllApeExitsByUserId(userId);
+        const sanitizedEntries = entries.map(({ id, user, ...rest }) => rest);
+        const sanitizedExits = entries.map(({ id, user, ...rest }) => rest);
+        return ({
+            entries: sanitizedEntries,
+            exits: sanitizedExits,
+        });
     }
 };
 exports.ApeService = ApeService;

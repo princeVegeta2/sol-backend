@@ -45,4 +45,14 @@ export class ApeController {
         }
         return this.apeService.updateApeHoldingsPrice(userId);
     }
+
+    @UseGuards(JwtAuthGuard)
+    @Get('user-history')
+    async getUserHistory(@Request() req) {
+        const userId = req.user.userId;
+        if (!userId) {
+            throw new UnauthorizedException("User ID not found");
+        }
+        return this.apeService.getUserApeHistory(userId);
+    }
 }

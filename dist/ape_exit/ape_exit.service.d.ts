@@ -18,5 +18,6 @@ export declare class ApeExitService {
     findAllApeExitWinsByUserId(userId: number): Promise<ApeExit[]>;
     findAllApeExitsByMintAddress(mintAddress: string): Promise<ApeExit[]>;
     findAllApeExits(): Promise<ApeExit[]>;
+    findAllApeExitsByUserId(userId: number): Promise<ApeExit[]>;
     deleteApeExit(apeExit: ApeExit): Promise<void>;
 }

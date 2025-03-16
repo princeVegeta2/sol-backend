@@ -141,101 +141,101 @@ export class SolanaService {
         outputMint: string,
         solAmount: number,
         slippage: number
-      ): Promise<any> {
+    ): Promise<any> {
         if (!outputMint || !solAmount || solAmount < 0.0001) {
-          throw new Error(
-            'Invalid parameters: outputMint is required, and solAmount must be at least 0.0001 SOL'
-          );
+            throw new Error(
+                'Invalid parameters: outputMint is required, and solAmount must be at least 0.0001 SOL'
+            );
         }
-      
+
         // 1. Convert SOL to lamports (1 SOL = 1e9 lamports)
         const lamports = Math.round(solAmount * 1e9);
-      
+
         // 2. Construct Jupiter quote URL
         const jupApiUrl = `https://quote-api.jup.ag/v6/quote?inputMint=${this.solMint}&outputMint=${outputMint}&amount=${lamports}&slippageBps=${slippage}`;
-      
+
         // 3. Fetch aggregator data from Jupiter
         let rawData: any;
         try {
-          const resp = await axios.get(jupApiUrl);
-          rawData = resp.data;
+            const resp = await axios.get(jupApiUrl);
+            rawData = resp.data;
         } catch (error) {
-          console.error('Error fetching token quote:', error.response?.data || error.message);
-          throw new Error('Failed to fetch token quote from Jupiter API');
+            console.error('Error fetching token quote:', error.response?.data || error.message);
+            throw new Error('Failed to fetch token quote from Jupiter API');
         }
-      
+
         // 4. Parse the aggregator response
         //    - otherAmountThreshold: guaranteed min *base units* of output token
         //    - swapUsdValue: approximate final output's total USD
         const outAmountThresholdStr = rawData.otherAmountThreshold;
         const swapUsdValueStr = rawData.swapUsdValue; // sometimes missing or 0 if no route
-      
+
         if (!outAmountThresholdStr || !swapUsdValueStr) {
-          throw new Error(
-            'Jupiter did not return otherAmountThreshold or swapUsdValue.'
-          );
+            throw new Error(
+                'Jupiter did not return otherAmountThreshold or swapUsdValue.'
+            );
         }
-      
+
         const outAmountBaseUnits = parseFloat(outAmountThresholdStr);
         const swapUsdValue = parseFloat(swapUsdValueStr);
-      
+
         if (outAmountBaseUnits <= 0 || swapUsdValue <= 0) {
-          throw new Error('Invalid threshold or swapUsdValue from Jupiter.');
+            throw new Error('Invalid threshold or swapUsdValue from Jupiter.');
         }
-      
+
         // 5. Fetch the SPL token's decimals from the chain
         //    (assuming you have a method like getTokenSupply(...) -> returns `decimals`)
         const tokenDecimals = await this.getTokenDecimals(outputMint);
-      
+
         // 6. Convert base units to user-friendly decimal
         const rawDecimalOut = outAmountBaseUnits / 10 ** tokenDecimals;
-      
+
         // 7. Price impact (optional check)
         const priceImpactPct = (parseFloat(rawData.priceImpactPct) || 0) * 100;
-      
+
         // 8. The “effective” token amount (this version doesn't forcibly compute 'priceImpactMultiplier',
         //    since outAmountThreshold is already a guaranteed amount after slippage. 
         //    But if you want a "pre-impact" vs. "post-impact" number, you can do more math.)
         const normalizedThresholdToken = rawDecimalOut;
-      
+
         // 9. Determine how much SOL we spent in USD terms
         const solUsdPrice = await this.getTokenSellPrice(this.solMint);
         const inAmountUsdValue = solAmount * solUsdPrice;
-      
+
         // 10. The aggregator's approximate final output's total USD
         //     (we already have swapUsdValue from aggregator).
-        const outUsdValue = swapUsdValue; 
-      
+        const outUsdValue = swapUsdValue;
+
         // 11. Also express that USD in terms of SOL, if you like:
         let solValue = outUsdValue / solUsdPrice;
         if (solValue > solAmount) {
-          solValue = solAmount;  // optional clamp
+            solValue = solAmount;  // optional clamp
         }
-      
+
         // 12. Return both raw data and the “normalized” fields
         return {
-          normalized: {
-            tokenDecimals,
-            // guaranteed min token amount in user-friendly decimals
-            normalizedThresholdToken: parseFloat(
-              normalizedThresholdToken.toFixed(tokenDecimals)
-            ),
-      
-            // how much SOL we spent in USD
-            inAmountUsdValue: parseFloat(inAmountUsdValue.toFixed(4)),
-      
-            // aggregator's swapUsdValue for final output in USD
-            usdValue: parseFloat(outUsdValue.toFixed(4)),
-      
-            // optional reference in SOL
-            solValue: parseFloat(solValue.toFixed(6)),
-      
-            priceImpact: `${priceImpactPct.toFixed(2)}%`,
-            slippage: `${(slippage / 100).toFixed(2)}%`,
-          },
-          raw: rawData, // so you can inspect the full Jupiter response
+            normalized: {
+                tokenDecimals,
+                // guaranteed min token amount in user-friendly decimals
+                normalizedThresholdToken: parseFloat(
+                    normalizedThresholdToken.toFixed(tokenDecimals)
+                ),
+
+                // how much SOL we spent in USD
+                inAmountUsdValue: parseFloat(inAmountUsdValue.toFixed(4)),
+
+                // aggregator's swapUsdValue for final output in USD
+                usdValue: parseFloat(outUsdValue.toFixed(4)),
+
+                // optional reference in SOL
+                solValue: parseFloat(solValue.toFixed(6)),
+
+                priceImpact: `${priceImpactPct.toFixed(2)}%`,
+                slippage: `${(slippage / 100).toFixed(2)}%`,
+            },
+            raw: rawData, // so you can inspect the full Jupiter response
         };
-      }      
+    }
 
 
     async getTokenQuoteSolOutputTest(
@@ -346,37 +346,43 @@ export class SolanaService {
 
     async getTokenSellPrice(mintAddress: string): Promise<number> {
         try {
+            // We'll fetch both the token and SOL's price data from Jupiter, 
+            // but we'll parse only the token's portion. 
+            // The 'So11111111111111111111111111111111111111112' address is SOL.
             const jupApiUrl = `https://api.jup.ag/price/v2?ids=${mintAddress.trim()},So11111111111111111111111111111111111111112&showExtraInfo=true`;
             const response = await axios.get(jupApiUrl);
 
-            if (!response.data) {
-                throw new Error('No price data found for the provided mint address');
+            if (!response.data || !response.data.data) {
+                throw new Error('No data or .data field in the Jupiter response');
             }
 
-            // Go into the data object for the token
+            // Extract the token data object
             const tokenData = response.data.data[mintAddress.trim()];
             if (!tokenData) {
-                throw new Error(`No token data found for ${mintAddress.trim()}`);
+                // If the token is not in the response, we consider it illiquid
+                return 0;
             }
 
-            // The "sellPrice" we want is typically at: `extraInfo.quotedPrice.sellPrice`
+            // The Jupiter sell price is found in extraInfo.quotedPrice.sellPrice
             const sellPriceStr = tokenData?.extraInfo?.quotedPrice?.sellPrice;
             if (!sellPriceStr) {
+                // If it's null/undefined, treat it as 0
                 return 0;
             }
 
             const sellPriceNum = parseFloat(sellPriceStr);
             if (isNaN(sellPriceNum)) {
-                throw new Error('Invalid sellPrice data found for the provided mint address');
+                throw new Error(`Invalid sellPrice value: ${sellPriceStr}`);
             }
 
             return sellPriceNum;
         } catch (error) {
+            // If it's a known NestJS BadRequestException, re-throw it
             if (error instanceof BadRequestException) {
-                // Re-throw BadRequestException to be handled by NestJS exception filters
                 throw error;
             }
-            console.error('Error fetching price:', error.message);
+            // Otherwise, log and wrap
+            console.error('Error fetching sell price from Jupiter:', error);
             throw new Error(`Failed to fetch token price: ${error.message}`);
         }
     }
@@ -455,8 +461,13 @@ export class SolanaService {
             };
         } catch (error) {
             console.error("Jupiter API Error:", error.response?.status, error.response?.data);
-            throw new Error(`Jupiter API Request Failed: ${error.message}`);
+            return {
+                name: "N/A",
+                symbol: "N/A",
+                decimals: "N/A",
+                image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR2gON53SU6YuM98Z1867Yn63flCGGDnC7mIw&s"
+            }
         }
     }
-    
+
 }

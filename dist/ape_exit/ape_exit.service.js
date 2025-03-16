@@ -66,6 +66,12 @@ let ApeExitService = class ApeExitService {
     async findAllApeExits() {
         return this.apeExitRepository.find();
     }
+    async findAllApeExitsByUserId(userId) {
+        const exits = await this.apeExitRepository.find({
+            where: { user: { id: userId } },
+        });
+        return exits;
+    }
     async deleteApeExit(apeExit) {
         await this.apeExitRepository.remove(apeExit);
     }

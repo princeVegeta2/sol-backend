@@ -76,7 +76,7 @@ export declare class ApeService {
         newBalance: number;
         newBalanceUsd: number;
     }>;
-    updateApeHoldingsPrice(userId: number): Promise<any[] | {
+    updateApeHoldingsPrice(userId: number): Promise<{
         holdings: {
             name: string;
             ticker: string;
@@ -110,4 +110,24 @@ export declare class ApeService {
         createdAt: Date;
         updatedAt: Date;
     }[]>;
+    getUserApeHistory(userId: number): Promise<{
+        entries: {
+            mintAddress: string;
+            amount: number;
+            value_usd: number;
+            value_sol: number;
+            price: number;
+            createdAt: Date;
+            updatedAt: Date;
+        }[];
+        exits: {
+            mintAddress: string;
+            amount: number;
+            value_usd: number;
+            value_sol: number;
+            price: number;
+            createdAt: Date;
+            updatedAt: Date;
+        }[];
+    }>;
 }

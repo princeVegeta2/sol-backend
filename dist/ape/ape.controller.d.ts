@@ -61,7 +61,7 @@ export declare class ApeController {
         newBalance: number;
         newBalanceUsd: number;
     }>;
-    updateApeHoldings(req: any): Promise<any[] | {
+    updateApeHoldings(req: any): Promise<{
         holdings: {
             name: string;
             ticker: string;
@@ -79,6 +79,26 @@ export declare class ApeController {
         errors: {
             mintAddress: string;
             message: string;
+        }[];
+    }>;
+    getUserHistory(req: any): Promise<{
+        entries: {
+            mintAddress: string;
+            amount: number;
+            value_usd: number;
+            value_sol: number;
+            price: number;
+            createdAt: Date;
+            updatedAt: Date;
+        }[];
+        exits: {
+            mintAddress: string;
+            amount: number;
+            value_usd: number;
+            value_sol: number;
+            price: number;
+            createdAt: Date;
+            updatedAt: Date;
         }[];
     }>;
 }

@@ -49,6 +49,13 @@ let ApeController = class ApeController {
         }
         return this.apeService.updateApeHoldingsPrice(userId);
     }
+    async getUserHistory(req) {
+        const userId = req.user.userId;
+        if (!userId) {
+            throw new common_1.UnauthorizedException("User ID not found");
+        }
+        return this.apeService.getUserApeHistory(userId);
+    }
 };
 exports.ApeController = ApeController;
 __decorate([
@@ -77,6 +84,14 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], ApeController.prototype, "updateApeHoldings", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.Get)('user-history'),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], ApeController.prototype, "getUserHistory", null);
 exports.ApeController = ApeController = __decorate([
     (0, common_1.Controller)('ape'),
     __metadata("design:paramtypes", [ape_service_1.ApeService])

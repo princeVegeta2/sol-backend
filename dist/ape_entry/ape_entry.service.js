@@ -35,13 +35,10 @@ let ApeEntryService = class ApeEntryService {
         return result;
     }
     async findAllApeEntriesByUserId(userId) {
-        const query = `
-            SELECT *
-            FROM ape_entries
-            WHERE user_id = $1
-        `;
-        const result = await this.apeEntryRepository.query(query, [userId]);
-        return result;
+        const entries = await this.apeEntryRepository.find({
+            where: { user: { id: userId } },
+        });
+        return entries;
     }
     async findAllApeEntries() {
         return this.apeEntryRepository.find();

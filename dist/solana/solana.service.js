@@ -205,12 +205,12 @@ let SolanaService = class SolanaService {
         try {
             const jupApiUrl = `https://api.jup.ag/price/v2?ids=${mintAddress.trim()},So11111111111111111111111111111111111111112&showExtraInfo=true`;
             const response = await axios_1.default.get(jupApiUrl);
-            if (!response.data) {
-                throw new Error('No price data found for the provided mint address');
+            if (!response.data || !response.data.data) {
+                throw new Error('No data or .data field in the Jupiter response');
             }
             const tokenData = response.data.data[mintAddress.trim()];
             if (!tokenData) {
-                throw new Error(`No token data found for ${mintAddress.trim()}`);
+                return 0;
             }
             const sellPriceStr = tokenData?.extraInfo?.quotedPrice?.sellPrice;
             if (!sellPriceStr) {
@@ -218,7 +218,7 @@ let SolanaService = class SolanaService {
             }
             const sellPriceNum = parseFloat(sellPriceStr);
             if (isNaN(sellPriceNum)) {
-                throw new Error('Invalid sellPrice data found for the provided mint address');
+                throw new Error(`Invalid sellPrice value: ${sellPriceStr}`);
             }
             return sellPriceNum;
         }
@@ -226,7 +226,7 @@ let SolanaService = class SolanaService {
             if (error instanceof common_1.BadRequestException) {
                 throw error;
             }
-            console.error('Error fetching price:', error.message);
+            console.error('Error fetching sell price from Jupiter:', error);
             throw new Error(`Failed to fetch token price: ${error.message}`);
         }
     }
@@ -296,7 +296,12 @@ let SolanaService = class SolanaService {
         }
         catch (error) {
             console.error("Jupiter API Error:", error.response?.status, error.response?.data);
-            throw new Error(`Jupiter API Request Failed: ${error.message}`);
+            return {
+                name: "N/A",
+                symbol: "N/A",
+                decimals: "N/A",
+                image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR2gON53SU6YuM98Z1867Yn63flCGGDnC7mIw&s"
+            };
         }
     }
 };
