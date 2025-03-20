@@ -397,8 +397,46 @@ let ApeService = class ApeService {
     async getUserApeHistory(userId) {
         const entries = await this.apeEntryService.findAllApeEntriesByUserId(userId);
         const exits = await this.apeExitService.findAllApeExitsByUserId(userId);
-        const sanitizedEntries = entries.map(({ id, user, ...rest }) => rest);
-        const sanitizedExits = entries.map(({ id, user, ...rest }) => rest);
+        const enrichedEntries = await Promise.all(entries.map(async (item) => {
+            const metadata = await this.tokenMetadataService.findTokenDataByMintAddress(item.mintAddress);
+            if (metadata?.name === "N/A") {
+                const newMetadata = await this.solanaService.getTokenMeta(item.mintAddress);
+                const updatedMetadata = await this.tokenMetadataService.updateTokenMetadata(newMetadata.symbol, newMetadata.name, newMetadata.image, metadata);
+                return {
+                    ...item,
+                    name: updatedMetadata?.name,
+                    ticker: updatedMetadata?.ticker,
+                    image: updatedMetadata?.image,
+                };
+            }
+            return {
+                ...item,
+                name: metadata?.name,
+                ticker: metadata?.ticker,
+                image: metadata?.image,
+            };
+        }));
+        const enrichedExits = await Promise.all(exits.map(async (item) => {
+            const metadata = await this.tokenMetadataService.findTokenDataByMintAddress(item.mintAddress);
+            if (metadata?.name === "N/A") {
+                const newMetadata = await this.solanaService.getTokenMeta(item.mintAddress);
+                const updatedMetadata = await this.tokenMetadataService.updateTokenMetadata(newMetadata.symbol, newMetadata.name, newMetadata.image, metadata);
+                return {
+                    ...item,
+                    name: updatedMetadata?.name,
+                    ticker: updatedMetadata?.ticker,
+                    image: updatedMetadata?.image,
+                };
+            }
+            return {
+                ...item,
+                name: metadata?.name,
+                ticker: metadata?.ticker,
+                image: metadata?.image,
+            };
+        }));
+        const sanitizedEntries = enrichedEntries.map(({ id, user, ...rest }) => rest);
+        const sanitizedExits = enrichedExits.map(({ id, user, ...rest }) => rest);
         return ({
             entries: sanitizedEntries,
             exits: sanitizedExits,
