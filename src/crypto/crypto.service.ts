@@ -41,7 +41,7 @@ export class CryptoService {
         }
 
         const solPrice = await this.solanaService.getTokenPrice(this.solMint);
-        console.log(`Sol proce: ${solPrice}`);
+        console.log(`Sol price: ${solPrice}`);
         console.log(`Fetching balance`);
         // 3. Check user’s SOL balance object
         const balance = await this.solBalanceService.getBalanceDataByUserId(userId, solPrice);

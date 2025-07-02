@@ -24,7 +24,7 @@ let SolanaService = class SolanaService {
             throw new Error('Invalid parameters...');
         }
         const lamports = Math.round(solAmount * 1e9);
-        const jupApiUrl = `https://quote-api.jup.ag/v6/quote?inputMint=${this.solMint}&outputMint=${outputMint}&amount=${lamports}&slippageBps=${slippage}`;
+        const jupApiUrl = `https://lite-api.jup.ag/swap/v1/quote?inputMint=${this.solMint}&outputMint=${outputMint}&amount=${lamports}&slippageBps=${slippage}`;
         try {
             const quoteResponse = await axios_1.default.get(jupApiUrl);
             const rawData = quoteResponse.data;
@@ -66,7 +66,7 @@ let SolanaService = class SolanaService {
         if (amountInBaseUnits <= 0) {
             throw new Error('Amount is too small after converting to base units');
         }
-        const jupApiBase = 'https://quote-api.jup.ag/v6/quote';
+        const jupApiBase = 'https://lite-api.jup.ag/swap/v1/quote';
         const url = `${jupApiBase}?inputMint=${inputMint}&outputMint=${this.solMint}&amount=${amountInBaseUnits}&slippageBps=${slippage}`;
         const resp = await axios_1.default.get(url);
         const data = resp.data;
@@ -88,7 +88,7 @@ let SolanaService = class SolanaService {
             throw new Error('Invalid parameters: outputMint is required, and solAmount must be at least 0.0001 SOL');
         }
         const lamports = Math.round(solAmount * 1e9);
-        const jupApiUrl = `https://quote-api.jup.ag/v6/quote?inputMint=${this.solMint}&outputMint=${outputMint}&amount=${lamports}&slippageBps=${slippage}`;
+        const jupApiUrl = `https://lite-api.jup.ag/swap/v1/quote?inputMint=${this.solMint}&outputMint=${outputMint}&amount=${lamports}&slippageBps=${slippage}`;
         let rawData;
         try {
             const resp = await axios_1.default.get(jupApiUrl);
@@ -138,7 +138,7 @@ let SolanaService = class SolanaService {
         if (amountInBaseUnits <= 0) {
             throw new Error('Amount is too small after converting to base units');
         }
-        const jupApiBase = 'https://quote-api.jup.ag/v6/quote';
+        const jupApiBase = 'https://lite-api.jup.ag/swap/v1/quote';
         const url = `${jupApiBase}?inputMint=${inputMint}&outputMint=${this.solMint}&amount=${amountInBaseUnits}&slippageBps=${slippage}`;
         const resp = await axios_1.default.get(url);
         const data = resp.data;
@@ -185,12 +185,12 @@ let SolanaService = class SolanaService {
     }
     async getTokenPrice(mintAddress) {
         try {
-            const jupApiUrl = `https://api.jup.ag/price/v2?ids=${mintAddress.trim()},So11111111111111111111111111111111111111112`;
+            const jupApiUrl = `https://lite-api.jup.ag/price/v3?ids=${mintAddress.trim()},So11111111111111111111111111111111111111112`;
             const response = await axios_1.default.get(jupApiUrl);
             if (!response.data) {
                 throw new Error('No price data found for the provided mint address');
             }
-            const price = parseFloat(response.data.data[mintAddress.trim()].price);
+            const price = parseFloat(response.data[mintAddress.trim()].usdPrice);
             if (isNaN(price)) {
                 throw new Error('Invalid price data found for the provided mint address');
             }
@@ -198,36 +198,25 @@ let SolanaService = class SolanaService {
         }
         catch (error) {
             console.error('Error fetching price:', error.message);
-            throw new Error(`Failed to fetch token price: ${error.message}`);
+            throw new Error(`Failed to fetch token price at getTokenPrice: ${error.message}`);
         }
     }
     async getTokenSellPrice(mintAddress) {
         try {
-            const jupApiUrl = `https://api.jup.ag/price/v2?ids=${mintAddress.trim()},So11111111111111111111111111111111111111112&showExtraInfo=true`;
+            const jupApiUrl = `https://lite-api.jup.ag/price/v3?ids=${mintAddress.trim()},So11111111111111111111111111111111111111112`;
             const response = await axios_1.default.get(jupApiUrl);
-            if (!response.data || !response.data.data) {
-                throw new Error('No data or .data field in the Jupiter response');
+            if (!response.data) {
+                throw new Error('No price data found for the provided mint address');
             }
-            const tokenData = response.data.data[mintAddress.trim()];
-            if (!tokenData) {
-                return 0;
+            const price = parseFloat(response.data[mintAddress.trim()].usdPrice);
+            if (isNaN(price)) {
+                throw new Error('Invalid price data found for the provided mint address');
             }
-            const sellPriceStr = tokenData?.extraInfo?.quotedPrice?.sellPrice;
-            if (!sellPriceStr) {
-                return 0;
-            }
-            const sellPriceNum = parseFloat(sellPriceStr);
-            if (isNaN(sellPriceNum)) {
-                throw new Error(`Invalid sellPrice value: ${sellPriceStr}`);
-            }
-            return sellPriceNum;
+            return price;
         }
         catch (error) {
-            if (error instanceof common_1.BadRequestException) {
-                throw error;
-            }
-            console.error('Error fetching sell price from Jupiter:', error);
-            throw new Error(`Failed to fetch token price: ${error.message}`);
+            console.error('Error fetching price:', error.message);
+            throw new Error(`Failed to fetch token price at getTokenSellPrice: ${error.message}`);
         }
     }
     async getTokenMetadata(mintAddress) {
@@ -285,13 +274,14 @@ let SolanaService = class SolanaService {
         }
     }
     async getTokenMeta(mintAddress) {
+        const fallbackImageUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR2gON53SU6YuM98Z1867Yn63flCGGDnC7mIw&s";
         try {
-            const res = await axios_1.default.get(`https://api.jup.ag/tokens/v1/token/${mintAddress}`);
+            const res = await axios_1.default.get(`https://lite-api.jup.ag/tokens/v2/search?query=${mintAddress}`);
             return {
-                name: res.data.name,
-                symbol: res.data.symbol,
-                decimals: res.data.decimals,
-                image: res.data.logoURI,
+                name: res.data[0]?.name || "N/A",
+                symbol: res.data[0]?.symbol || "N/A",
+                decimals: res.data[0]?.decimals ?? "N/A",
+                image: res.data[0]?.icon || fallbackImageUrl
             };
         }
         catch (error) {
@@ -300,7 +290,7 @@ let SolanaService = class SolanaService {
                 name: "N/A",
                 symbol: "N/A",
                 decimals: "N/A",
-                image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR2gON53SU6YuM98Z1867Yn63flCGGDnC7mIw&s"
+                image: fallbackImageUrl,
             };
         }
     }

@@ -28,7 +28,7 @@ export class SolanaService {
 
         // 2. Build the Jupiter quote URL
         //    e.g., this.solMint = 'So11111111111111111111111111111111111111112'
-        const jupApiUrl = `https://quote-api.jup.ag/v6/quote?inputMint=${this.solMint}&outputMint=${outputMint}&amount=${lamports}&slippageBps=${slippage}`;
+        const jupApiUrl = `https://lite-api.jup.ag/swap/v1/quote?inputMint=${this.solMint}&outputMint=${outputMint}&amount=${lamports}&slippageBps=${slippage}`;
 
         try {
             // 3. Fetch the quote from Jupiter
@@ -112,7 +112,8 @@ export class SolanaService {
         }
 
         // 3. Construct the aggregator (Jupiter) URL
-        const jupApiBase = 'https://quote-api.jup.ag/v6/quote';
+        // 7.2.2025 Changed api endpoint to this from previously  https://quote-api.jup.ag/v6/quote?
+        const jupApiBase = 'https://lite-api.jup.ag/swap/v1/quote';
         const url = `${jupApiBase}?inputMint=${inputMint}&outputMint=${this.solMint}&amount=${amountInBaseUnits}&slippageBps=${slippage}`;
 
         // 4. Fetch aggregator data
@@ -152,7 +153,8 @@ export class SolanaService {
         const lamports = Math.round(solAmount * 1e9);
 
         // 2. Construct Jupiter quote URL
-        const jupApiUrl = `https://quote-api.jup.ag/v6/quote?inputMint=${this.solMint}&outputMint=${outputMint}&amount=${lamports}&slippageBps=${slippage}`;
+        // 7.2.2025 Changed api endpoint to this from previously  https://quote-api.jup.ag/v6/quote?
+        const jupApiUrl = `https://lite-api.jup.ag/swap/v1/quote?inputMint=${this.solMint}&outputMint=${outputMint}&amount=${lamports}&slippageBps=${slippage}`;
 
         // 3. Fetch aggregator data from Jupiter
         let rawData: any;
@@ -256,7 +258,8 @@ export class SolanaService {
         }
 
         // 3. Construct the aggregator (Jupiter) URL
-        const jupApiBase = 'https://quote-api.jup.ag/v6/quote';
+        // 7.2.2025 Changed api endpoint to this from previously  https://quote-api.jup.ag/v6/quote?
+        const jupApiBase = 'https://lite-api.jup.ag/swap/v1/quote';
         const url = `${jupApiBase}?inputMint=${inputMint}&outputMint=${this.solMint}&amount=${amountInBaseUnits}&slippageBps=${slippage}`;
 
         // 4. Fetch aggregator data
@@ -323,14 +326,16 @@ export class SolanaService {
 
     async getTokenPrice(mintAddress: string): Promise<number> {
         try {
-            const jupApiUrl = `https://api.jup.ag/price/v2?ids=${mintAddress.trim()},So11111111111111111111111111111111111111112`;
+            // 7/2/2025 changed to new v3 api from https://api.jup.ag/price/v2
+            const jupApiUrl = `https://lite-api.jup.ag/price/v3?ids=${mintAddress.trim()},So11111111111111111111111111111111111111112`;
             const response = await axios.get(jupApiUrl);
 
             if (!response.data) {
                 throw new Error('No price data found for the provided mint address');
             }
-
-            const price = parseFloat(response.data.data[mintAddress.trim()].price);
+            // 7/2/2025 changed to different parsing for api v3
+            // const price = parseFloat(response.data.data[mintAddress.trim()].price);
+            const price = parseFloat(response.data[mintAddress.trim()].usdPrice);
 
             if (isNaN(price)) {
                 throw new Error('Invalid price data found for the provided mint address');
@@ -339,12 +344,13 @@ export class SolanaService {
             return price;
         } catch (error) {
             console.error('Error fetching price:', error.message);
-            throw new Error(`Failed to fetch token price: ${error.message}`);
+            throw new Error(`Failed to fetch token price at getTokenPrice: ${error.message}`);
         }
     }
 
 
     async getTokenSellPrice(mintAddress: string): Promise<number> {
+        /*
         try {
             // We'll fetch both the token and SOL's price data from Jupiter, 
             // but we'll parse only the token's portion. 
@@ -384,6 +390,28 @@ export class SolanaService {
             // Otherwise, log and wrap
             console.error('Error fetching sell price from Jupiter:', error);
             throw new Error(`Failed to fetch token price: ${error.message}`);
+        }
+            */
+        try {
+            // 7/2/2025 changed to new v3 api from https://api.jup.ag/price/v2
+            const jupApiUrl = `https://lite-api.jup.ag/price/v3?ids=${mintAddress.trim()},So11111111111111111111111111111111111111112`;
+            const response = await axios.get(jupApiUrl);
+
+            if (!response.data) {
+                throw new Error('No price data found for the provided mint address');
+            }
+            // 7/2/2025 changed to different parsing for api v3
+            // const price = parseFloat(response.data.data[mintAddress.trim()].price);
+            const price = parseFloat(response.data[mintAddress.trim()].usdPrice);
+
+            if (isNaN(price)) {
+                throw new Error('Invalid price data found for the provided mint address');
+            }
+
+            return price;
+        } catch (error) {
+            console.error('Error fetching price:', error.message);
+            throw new Error(`Failed to fetch token price at getTokenSellPrice: ${error.message}`);
         }
     }
 
@@ -451,21 +479,24 @@ export class SolanaService {
     }
 
     async getTokenMeta(mintAddress: string) {
+        const fallbackImageUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR2gON53SU6YuM98Z1867Yn63flCGGDnC7mIw&s";
         try {
-            const res = await axios.get(`https://api.jup.ag/tokens/v1/token/${mintAddress}`);
+            // 7/2/2025 changed to new api from below
+            // const res = await axios.get(`https://api.jup.ag/tokens/v1/token/${mintAddress}`);
+            const res = await axios.get(`https://lite-api.jup.ag/tokens/v2/search?query=${mintAddress}`);
             return {
-                name: res.data.name,
-                symbol: res.data.symbol,
-                decimals: res.data.decimals,
-                image: res.data.logoURI,
-            };
+                name: res.data[0]?.name || "N/A",
+                symbol: res.data[0]?.symbol || "N/A",
+                decimals: res.data[0]?.decimals ?? "N/A",
+                image: res.data[0]?.icon || fallbackImageUrl
+            }
         } catch (error) {
             console.error("Jupiter API Error:", error.response?.status, error.response?.data);
             return {
                 name: "N/A",
                 symbol: "N/A",
                 decimals: "N/A",
-                image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR2gON53SU6YuM98Z1867Yn63flCGGDnC7mIw&s"
+                image: fallbackImageUrl,
             }
         }
     }

@@ -45,7 +45,7 @@ let CryptoService = class CryptoService {
             throw new common_1.BadRequestException('User stats not found');
         }
         const solPrice = await this.solanaService.getTokenPrice(this.solMint);
-        console.log(`Sol proce: ${solPrice}`);
+        console.log(`Sol price: ${solPrice}`);
         console.log(`Fetching balance`);
         const balance = await this.solBalanceService.getBalanceDataByUserId(userId, solPrice);
         if (!balance) {

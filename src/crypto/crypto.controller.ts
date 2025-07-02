@@ -19,7 +19,7 @@ export class CryptoController {
   async testPrice(
     @Query('mintAddress') mintAddress: string
   ) {
-    const jupApiUrl = `https://api.jup.ag/price/v2?ids=${mintAddress.trim()},So11111111111111111111111111111111111111112&showExtraInfo=true`;
+    const jupApiUrl = `https://lite-api.jup.ag/price/v3?ids=${mintAddress.trim()},So11111111111111111111111111111111111111112&showExtraInfo=true`;
     const response = await axios.get(jupApiUrl);
     return response.data;
   }
