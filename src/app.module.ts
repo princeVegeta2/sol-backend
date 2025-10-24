@@ -43,24 +43,18 @@ import { join } from 'path';
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        
+      useFactory: (config: ConfigService) => ({
         type: 'postgres',
-        host: configService.get('DB_HOST'),
-        port: configService.get('DB_PORT'),
-        username: configService.get('DB_USERNAME'),
-        password: configService.get('DB_PASSWORD'),
-        database: configService.get('DB_NAME'),
+        url: config.get<string>('DATABASE_URL'),
         entities: [join(process.cwd(), 'dist/**/*.entity.js')],
         synchronize: false,
-        ssl: {
-          rejectUnauthorized: false,
-        },
-      }),
+        ssl: false,
+      })
+
     })
   ],
   controllers: [AppController],
   providers: [AppService],
 })
 
-export class AppModule {}
+export class AppModule { }
