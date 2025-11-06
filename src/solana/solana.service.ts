@@ -350,48 +350,6 @@ export class SolanaService {
 
 
     async getTokenSellPrice(mintAddress: string): Promise<number> {
-        /*
-        try {
-            // We'll fetch both the token and SOL's price data from Jupiter, 
-            // but we'll parse only the token's portion. 
-            // The 'So11111111111111111111111111111111111111112' address is SOL.
-            const jupApiUrl = `https://api.jup.ag/price/v2?ids=${mintAddress.trim()},So11111111111111111111111111111111111111112&showExtraInfo=true`;
-            const response = await axios.get(jupApiUrl);
-
-            if (!response.data || !response.data.data) {
-                throw new Error('No data or .data field in the Jupiter response');
-            }
-
-            // Extract the token data object
-            const tokenData = response.data.data[mintAddress.trim()];
-            if (!tokenData) {
-                // If the token is not in the response, we consider it illiquid
-                return 0;
-            }
-
-            // The Jupiter sell price is found in extraInfo.quotedPrice.sellPrice
-            const sellPriceStr = tokenData?.extraInfo?.quotedPrice?.sellPrice;
-            if (!sellPriceStr) {
-                // If it's null/undefined, treat it as 0
-                return 0;
-            }
-
-            const sellPriceNum = parseFloat(sellPriceStr);
-            if (isNaN(sellPriceNum)) {
-                throw new Error(`Invalid sellPrice value: ${sellPriceStr}`);
-            }
-
-            return sellPriceNum;
-        } catch (error) {
-            // If it's a known NestJS BadRequestException, re-throw it
-            if (error instanceof BadRequestException) {
-                throw error;
-            }
-            // Otherwise, log and wrap
-            console.error('Error fetching sell price from Jupiter:', error);
-            throw new Error(`Failed to fetch token price: ${error.message}`);
-        }
-            */
         try {
             // 7/2/2025 changed to new v3 api from https://api.jup.ag/price/v2
             const jupApiUrl = `https://lite-api.jup.ag/price/v3?ids=${mintAddress.trim()},So11111111111111111111111111111111111111112`;
