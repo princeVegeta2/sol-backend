@@ -19,6 +19,7 @@ import { ApeModule } from './ape/ape.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { join } from 'path';
+import { PerpModule } from './perps/perp.module';
 
 
 
@@ -40,6 +41,7 @@ import { join } from 'path';
     ApeExitModule,
     ApeHoldingModule,
     ApeModule,
+    PerpModule,
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

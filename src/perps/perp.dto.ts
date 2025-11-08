@@ -20,12 +20,6 @@ export class StartPerpDto {
   @IsNumber()
   @IsPositive()
   @Transform(({ value }) => parseFloat(value))
-  quantity: number;
-
-  @IsOptional()
-  @IsNumber()
-  @IsPositive()
-  @Transform(({ value }) => parseFloat(value))
   stopLoss?: number;
 
   @IsNumber()

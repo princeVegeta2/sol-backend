@@ -1,4 +1,4 @@
-import { Controller, Get, Query, BadRequestException, Body, Post, Delete, UseGuards, Request, Param } from '@nestjs/common';
+import { Controller, Get, Query, BadRequestException, Body, Post, Delete, UseGuards, Request, Param, Req } from '@nestjs/common';
 import { SolanaService } from '../solana/solana.service';
 import { CreateEntryDto } from '../entries/entry.dto';
 import { CreateExitDto } from 'src/exits/exit.dto';
@@ -6,6 +6,7 @@ import { CryptoService } from './crypto.service';
 import { SolBalanceService } from 'src/balance/sol_balance.service';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import axios from 'axios';
+import { StartPerpDto } from 'src/perps/perp.dto';
 
 @Controller('crypto')
 export class CryptoController {

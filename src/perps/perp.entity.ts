@@ -6,6 +6,7 @@ import {
     UpdateDateColumn,
     ManyToOne,
     JoinColumn,
+    RelationId,
 } from 'typeorm';
 import { User } from '../user/user.entity';
 
@@ -17,6 +18,9 @@ export class Perp {
     @ManyToOne(() => User) // Many entries can belong to one user
     @JoinColumn({ name: 'user_id' }) // Maps the foreign key column to the user table
     user: User;
+
+    @RelationId((perp: Perp) => perp.user)
+    user_id: number; // <-- now Perp has user_id for TypeScript
 
     @Column({ type: 'varchar', length: 10 })
     side: string;
@@ -36,11 +40,8 @@ export class Perp {
     @Column({ type: 'numeric', precision: 15, scale: 15, nullable: false })
     entry_price: number;
 
-    @Column({ type: 'numeric', precision: 15, scale: 15, nullable: false })
+    @Column({ type: 'numeric', precision: 15, scale: 15, nullable: true })
     exit_price: number;
-
-    @Column({ name: 'quantity', type: 'numeric', precision: 30, scale: 18, nullable: false})
-    quantity: number;
 
     @Column({ type: 'numeric', precision: 15, scale: 15, nullable: false })
     liquidation_price: number;
